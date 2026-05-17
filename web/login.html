@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skopix · Sign in</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #080810;
+  --surface: #0d0d1a;
+  --surface2: #12121f;
+  --border: rgba(255,255,255,0.06);
+  --border-bright: rgba(0,212,255,0.2);
+  --cyan: #00d4ff;
+  --cyan-dim: rgba(0,212,255,0.12);
+  --red: #ef4444;
+  --green: #10b981;
+  --yellow: #f59e0b;
+  --text: #e8eaf0;
+  --muted: #5a6180;
+  --muted2: #3a3f5c;
+  --white: #ffffff;
+  --mono: 'DM Mono', monospace;
+  --display: 'Syne', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--display);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  position: relative;
+  overflow-x: hidden;
+}
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+  pointer-events: none;
+  z-index: 0;
+}
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at 50% 30%, rgba(0,212,255,0.08) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+.wrap {
+  position: relative;
+  z-index: 1;
+  max-width: 440px;
+  width: 100%;
+}
+.brand {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--cyan);
+  letter-spacing: 0.2em;
+  text-align: center;
+  margin-bottom: 12px;
+}
+.title {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 36px;
+  color: var(--white);
+  text-align: center;
+  margin-bottom: 12px;
+  line-height: 1.1;
+}
+.sub {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+  margin-bottom: 36px;
+  line-height: 1.6;
+}
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+}
+.field { margin-bottom: 18px; }
+.label {
+  display: block;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.input {
+  width: 100%;
+  padding: 12px 14px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--white);
+  font-family: var(--mono);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.input:focus {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 3px var(--cyan-dim);
+}
+.btn {
+  width: 100%;
+  padding: 14px 24px;
+  background: var(--cyan);
+  color: var(--bg);
+  border: none;
+  border-radius: 8px;
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 8px;
+  text-transform: uppercase;
+}
+.btn:hover { background: #00b8e0; box-shadow: 0 0 30px rgba(0,212,255,0.3); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.alert {
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-family: var(--mono);
+  font-size: 12px;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+.alert.error {
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.3);
+  color: var(--red);
+}
+.alert.success {
+  background: rgba(16,185,129,0.1);
+  border: 1px solid rgba(16,185,129,0.3);
+  color: var(--green);
+}
+.note {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+  margin-top: 24px;
+  line-height: 1.6;
+}
+.hidden { display: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">SKOPIX</div>
+  <h1 class="title">Sign in.</h1>
+  <p class="sub">Welcome back. Enter your email and password.</p>
+
+  <div class="card">
+    <div id="alert" class="alert hidden"></div>
+
+    <form id="login-form">
+      <div class="field">
+        <label class="label" for="email">Email address</label>
+        <input class="input" id="email" name="email" type="email" autocomplete="email" required autofocus placeholder="you@yourcompany.com">
+      </div>
+
+      <div class="field">
+        <label class="label" for="password">Password</label>
+        <input class="input" id="password" name="password" type="password" autocomplete="current-password" required placeholder="Your password">
+      </div>
+
+      <button id="submit-btn" class="btn" type="submit">Sign in →</button>
+    </form>
+  </div>
+
+  <p class="note">
+    Need an account? Ask your Skopix admin for an invite.
+  </p>
+</div>
+
+<script>
+const form = document.getElementById('login-form');
+const alertEl = document.getElementById('alert');
+const submitBtn = document.getElementById('submit-btn');
+
+function showAlert(message, kind = 'error') {
+  alertEl.textContent = message;
+  alertEl.className = 'alert ' + kind;
+  alertEl.classList.remove('hidden');
+}
+
+// On load: if already signed in, redirect to dashboard. If team mode is off,
+// no point being here either.
+async function checkStatus() {
+  try {
+    const statusRes = await fetch('/api/team/status');
+    if (!statusRes.ok) {
+      window.location.href = '/app/';
+      return;
+    }
+    const status = await statusRes.json();
+    if (status.needsSetup) {
+      window.location.href = '/setup';
+      return;
+    }
+    // Try /api/auth/me - if logged in, skip to dashboard
+    const meRes = await fetch('/api/auth/me');
+    if (meRes.ok) {
+      window.location.href = '/app/';
+    }
+  } catch {}
+}
+checkStatus();
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  alertEl.classList.add('hidden');
+
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Signing in...';
+
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      showAlert(data.error || 'Sign in failed.');
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Sign in →';
+      return;
+    }
+
+    showAlert('Signed in. Redirecting...', 'success');
+    setTimeout(() => { window.location.href = '/app/'; }, 600);
+  } catch (err) {
+    showAlert('Network error: ' + err.message);
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Sign in →';
+  }
+});
+</script>
+</body>
+</html>

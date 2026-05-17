@@ -1,0 +1,29 @@
+name: Login Tests
+description: This is the login tests for various websites
+defaults:
+  headless: true
+waitBetweenTests: 2000
+tests:
+  - name: Login to panintelligence
+    url: http://localhost:8224/pi/?lang=en_GB
+    goal: log in with the provided credentials and verify the dashboard loads
+      successfully
+    maxSteps: 20
+    tags:
+      - login
+    credentials: panintelligence
+  - name: Login to heroku app
+    url: https://the-internet.herokuapp.com/login
+    goal: log in with username 'tomsmith' and password 'SuperSecretPassword!' and
+      verify successful login
+    maxSteps: 20
+    tags:
+      - login
+  - name: save
+    url: https://the-internet.herokuapp.com/login
+    goal: log in with username 'tomsmith' and password 'SuperSecretPassword!' and
+      verify successful login
+    maxSteps: 20
+    tags:
+      - login
+parallel: 3

@@ -1,0 +1,56 @@
+# ===== Skopix Production Docker Compose =====
+# Skopix + Caddy reverse proxy with automatic Let's Encrypt HTTPS.
+# Recommended for any team deployment that's accessible over the internet.
+#
+# Setup:
+#  1. Point your domain's A record at this server's public IP
+#     (e.g. skopix.yourcompany.com  ->  78.46.142.99)
+#  2. Edit the Caddyfile in this directory to use your domain (replace the
+#     example "skopix.yourcompany.com" line)
+#  3. Edit .env to set SKOPIX_SECRET_KEY and any workspace tokens
+#  4. docker compose -f docker-compose.production.yml up -d
+#  5. Wait ~30 seconds for Caddy to fetch a Let's Encrypt cert
+#  6. Visit https://skopix.yourcompany.com - secure padlock, valid cert, done
+
+services:
+  skopix:
+    image: ghcr.io/x444dyx/skopix:latest
+    container_name: skopix
+    restart: unless-stopped
+    # No host ports - Caddy forwards traffic to skopix:9000 over the Docker network.
+    # External access only via Caddy on 443.
+    expose:
+      - "9000"
+    volumes:
+      - ./skopix-data:/data
+    environment:
+      SKOPIX_SECRET_KEY: ${SKOPIX_SECRET_KEY}
+      SKOPIX_TEAM_MODE: "true"
+      # Optional workspace token defaults (uncomment + set in .env if you want them)
+      # GEMINI_API_KEY: ${GEMINI_API_KEY}
+      # GITHUB_TOKEN: ${GITHUB_TOKEN}
+      # GITHUB_REPO: ${GITHUB_REPO}
+      # JIRA_BASE_URL: ${JIRA_BASE_URL}
+      # JIRA_PROJECT_KEY: ${JIRA_PROJECT_KEY}
+      # LINEAR_API_KEY: ${LINEAR_API_KEY}
+
+  caddy:
+    image: caddy:2
+    container_name: skopix-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"  # HTTP/3 support
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data        # certs + private keys live here - back this up!
+      - caddy_config:/config
+    depends_on:
+      - skopix
+
+volumes:
+  # Caddy stores fetched Let's Encrypt certificates here. Persisting this avoids
+  # re-fetching certs on every restart (and avoids hitting LE rate limits).
+  caddy_data:
+  caddy_config:

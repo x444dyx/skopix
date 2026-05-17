@@ -1,0 +1,1912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skopix — AI QA Agent</title>
+<meta name="description" content="AI-powered QA agent that tests your web app like a human would. Navigates, judges, reports.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #080810;
+  --surface: #0d0d1a;
+  --surface2: #12121f;
+  --border: rgba(255,255,255,0.06);
+  --border-bright: rgba(0,212,255,0.2);
+  --cyan: #00d4ff;
+  --cyan-dim: rgba(0,212,255,0.12);
+  --cyan-mid: rgba(0,212,255,0.4);
+  --purple: #7c3aed;
+  --purple-dim: rgba(124,58,237,0.12);
+  --text: #e8eaf0;
+  --muted: #5a6180;
+  --muted2: #3a3f5c;
+  --white: #ffffff;
+  --mono: 'DM Mono', monospace;
+  --display: 'Syne', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; overflow-x: hidden; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--display);
+  overflow-x: hidden;
+  cursor: none;
+}
+
+/* Custom cursor */
+.cursor {
+  position: fixed;
+  width: 8px; height: 8px;
+  background: var(--cyan);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  transition: transform 0.1s ease;
+  mix-blend-mode: screen;
+}
+.cursor-ring {
+  position: fixed;
+  width: 32px; height: 32px;
+  border: 1px solid var(--cyan-mid);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9998;
+  transition: transform 0.15s ease, width 0.2s ease, height 0.2s ease, opacity 0.2s ease;
+}
+.cursor.hover { transform: scale(3); }
+.cursor-ring.hover { width: 50px; height: 50px; opacity: 0.5; }
+
+/* Grid background */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Nav */
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  padding: 20px 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(to bottom, rgba(8,8,16,0.95), transparent);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.3s ease;
+}
+nav.scrolled { border-bottom-color: var(--border); }
+
+.nav-logo {
+  font-family: var(--mono);
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--cyan);
+  letter-spacing: 0.15em;
+  text-decoration: none;
+}
+.nav-logo span { color: var(--muted); }
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 36px;
+  list-style: none;
+}
+.nav-links a {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+  text-decoration: none;
+  letter-spacing: 0.08em;
+  transition: color 0.2s;
+}
+.nav-links a:hover { color: var(--white); }
+
+.nav-cta {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--cyan) !important;
+  border: 1px solid var(--border-bright);
+  padding: 8px 18px;
+  border-radius: 4px;
+  transition: background 0.2s !important;
+}
+.nav-cta:hover { background: var(--cyan-dim) !important; }
+
+/* Sections */
+section { position: relative; z-index: 1; }
+
+/* Hero */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 140px 48px 140px;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-glow {
+  position: absolute;
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, rgba(0,212,255,0.08) 0%, transparent 70%);
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  animation: pulse-glow 4s ease-in-out infinite;
+}
+.hero-glow2 {
+  position: absolute;
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, rgba(124,58,237,0.06) 0%, transparent 70%);
+  top: 40%; left: 30%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  animation: pulse-glow 6s ease-in-out infinite reverse;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.6; transform: translate(-50%, -50%) scale(1); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--cyan);
+  border: 1px solid var(--border-bright);
+  padding: 6px 16px;
+  border-radius: 100px;
+  margin-bottom: 40px;
+  opacity: 0;
+  animation: fade-up 0.8s ease 0.2s forwards;
+  background: var(--cyan-dim);
+}
+.hero-badge-dot {
+  width: 6px; height: 6px;
+  background: var(--cyan);
+  border-radius: 50%;
+  animation: blink 1.5s ease-in-out infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+.hero-title {
+  font-size: clamp(64px, 10vw, 120px);
+  font-weight: 800;
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+  color: var(--white);
+  margin-bottom: 32px;
+  opacity: 0;
+  animation: fade-up 0.8s ease 0.4s forwards;
+}
+.hero-title .accent { color: var(--cyan); }
+.hero-title .dim { color: var(--muted2); }
+
+.hero-sub {
+  font-family: var(--mono);
+  font-size: clamp(14px, 2vw, 18px);
+  color: var(--muted);
+  max-width: 540px;
+  line-height: 1.7;
+  margin: 0 auto 56px;
+  opacity: 0;
+  animation: fade-up 0.8s ease 0.6s forwards;
+}
+
+.hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  justify-content: center;
+  opacity: 0;
+  animation: fade-up 0.8s ease 0.8s forwards;
+  flex-wrap: wrap;
+}
+
+.btn-primary {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--bg);
+  background: var(--cyan);
+  border: none;
+  padding: 14px 32px;
+  border-radius: 6px;
+  cursor: none;
+  text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 0 30px rgba(0,212,255,0.3);
+}
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 50px rgba(0,212,255,0.5);
+}
+
+.btn-ghost {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--muted);
+  background: none;
+  border: 1px solid var(--border);
+  padding: 14px 32px;
+  border-radius: 6px;
+  cursor: none;
+  text-decoration: none;
+  transition: border-color 0.2s, color 0.2s;
+}
+.btn-ghost:hover { border-color: var(--cyan-mid); color: var(--text); }
+
+.hero-command {
+  margin-top: 60px;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 16px 28px;
+  border-radius: 8px;
+  opacity: 0;
+  animation: fade-up 0.8s ease 1s forwards;
+  display: inline-block;
+}
+.hero-command .prompt { color: var(--cyan); }
+.hero-command .cmd { color: var(--white); }
+.hero-command .flag { color: var(--purple); }
+
+.hero-scroll {
+  position: absolute;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  opacity: 0;
+  animation: fade-in 1s ease 1.5s forwards;
+  z-index: 2;
+}
+.hero-scroll span {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  color: var(--muted);
+}
+.scroll-line {
+  width: 1px; height: 40px;
+  background: linear-gradient(to bottom, var(--cyan), transparent);
+  animation: scroll-anim 2s ease-in-out infinite;
+}
+@keyframes scroll-anim { 0%{opacity:0;transform:scaleY(0);transform-origin:top} 50%{opacity:1;transform:scaleY(1)} 100%{opacity:0;transform:scaleY(1);transform-origin:bottom} }
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Stats bar */
+.stats {
+  padding: 0 48px;
+  margin-bottom: 120px;
+}
+.stats-inner {
+  max-width: 1000px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface);
+}
+.stat-item {
+  padding: 36px 32px;
+  border-right: 1px solid var(--border);
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.stat-item:last-child { border-right: none; }
+.stat-item.visible { opacity: 1; transform: none; }
+.stat-num {
+  font-size: 36px;
+  font-weight: 800;
+  color: var(--cyan);
+  letter-spacing: -0.02em;
+  margin-bottom: 6px;
+}
+.stat-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+}
+
+/* How it works */
+.how {
+  padding: 0 48px 140px;
+}
+.how-inner { max-width: 1000px; margin: 0 auto; }
+
+.section-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  color: var(--cyan);
+  margin-bottom: 16px;
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.6s, transform 0.6s;
+}
+.section-label.visible { opacity: 1; transform: none; }
+
+.section-title {
+  font-size: clamp(36px, 5vw, 56px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--white);
+  margin-bottom: 80px;
+  line-height: 1.05;
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.6s 0.1s, transform 0.6s 0.1s;
+}
+.section-title.visible { opacity: 1; transform: none; }
+
+.steps-grid {
+  display: grid;
+  gap: 2px;
+}
+
+.step-item {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 2px;
+  opacity: 0;
+  transform: translateX(-20px);
+  transition: opacity 0.5s ease, transform 0.5s ease, border-color 0.3s;
+}
+.step-item.visible { opacity: 1; transform: none; }
+.step-item:hover { border-color: var(--border-bright); }
+
+.step-num-col {
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  border-right: 1px solid var(--border);
+  padding: 32px 0;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
+
+.step-content {
+  background: var(--surface2);
+  padding: 32px 40px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 24px;
+}
+
+.step-text-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--white);
+  margin-bottom: 8px;
+}
+.step-text-body {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.7;
+  max-width: 480px;
+}
+
+.step-icon {
+  width: 48px; height: 48px;
+  border-radius: 12px;
+  background: var(--cyan-dim);
+  border: 1px solid var(--border-bright);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+/* Features */
+.features {
+  padding: 0 48px 140px;
+}
+.features-inner { max-width: 1000px; margin: 0 auto; }
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+}
+
+.feature-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 36px 32px;
+  transition: border-color 0.3s, background 0.3s;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s ease, transform 0.5s ease, border-color 0.3s, background 0.3s;
+}
+.feature-card.visible { opacity: 1; transform: none; }
+.feature-card:hover { border-color: var(--border-bright); background: var(--surface2); }
+
+.feature-icon {
+  width: 44px; height: 44px;
+  background: var(--cyan-dim);
+  border: 1px solid var(--border-bright);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  margin-bottom: 20px;
+}
+.feature-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--white);
+  margin-bottom: 10px;
+}
+.feature-body {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+/* Terminal demo */
+.demo {
+  padding: 0 48px 140px;
+}
+.demo-inner { max-width: 1000px; margin: 0 auto; }
+
+.terminal {
+  background: #05050c;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  font-family: var(--mono);
+  font-size: 13px;
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+.terminal.visible { opacity: 1; transform: none; }
+
+.terminal-header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.term-dots { display: flex; gap: 7px; }
+.term-dot { width: 12px; height: 12px; border-radius: 50%; }
+.term-dot:nth-child(1) { background: #ff5f57; }
+.term-dot:nth-child(2) { background: #febc2e; }
+.term-dot:nth-child(3) { background: #28c840; }
+.term-title { color: var(--muted); font-size: 12px; margin-left: auto; margin-right: auto; letter-spacing: 0.08em; }
+
+.terminal-body { padding: 28px 28px 28px; line-height: 2; }
+.t-prompt { color: var(--cyan); }
+.t-cmd { color: var(--white); }
+.t-flag { color: #a78bfa; }
+.t-val { color: #fb923c; }
+.t-out { color: var(--muted); }
+.t-pass { color: #4ade80; }
+.t-warn { color: #fbbf24; }
+.t-err { color: #f87171; }
+.t-dim { color: var(--muted2); }
+.t-info { color: var(--cyan); }
+.t-sep { color: var(--muted2); display: block; }
+.t-line { display: block; }
+.t-blink { animation: blink 1s step-end infinite; }
+
+/* Providers */
+.providers {
+  padding: 0 48px 140px;
+}
+.providers-inner { max-width: 1000px; margin: 0 auto; text-align: center; }
+
+.providers-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 60px;
+}
+.provider-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 32px 24px;
+  transition: border-color 0.3s, transform 0.3s;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s ease, transform 0.5s ease, border-color 0.3s;
+}
+.provider-card.visible { opacity: 1; transform: none; }
+.provider-card:hover { border-color: var(--border-bright); }
+.provider-name { font-size: 20px; font-weight: 800; color: var(--white); margin-bottom: 8px; }
+.provider-model { font-family: var(--mono); font-size: 11px; color: var(--cyan); margin-bottom: 16px; letter-spacing: 0.08em; }
+.provider-desc { font-family: var(--mono); font-size: 12px; color: var(--muted); line-height: 1.6; }
+.provider-tag {
+  display: inline-block;
+  margin-top: 16px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  padding: 4px 12px;
+  border-radius: 100px;
+  border: 1px solid;
+}
+.tag-free { color: #4ade80; border-color: rgba(74,222,128,0.3); background: rgba(74,222,128,0.08); }
+.tag-local { color: #a78bfa; border-color: rgba(167,139,250,0.3); background: rgba(167,139,250,0.08); }
+.tag-vision { color: var(--cyan); border-color: var(--border-bright); background: var(--cyan-dim); }
+
+/* Docs */
+.docs {
+  padding: 0 48px 140px;
+}
+.docs-inner { max-width: 1000px; margin: 0 auto; }
+
+.docs-grid {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 2px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+.docs-grid.visible { opacity: 1; transform: none; }
+
+.docs-nav {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 24px 0;
+}
+.docs-nav-section {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--muted2);
+  padding: 16px 24px 8px;
+  text-transform: uppercase;
+}
+.docs-nav-item {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--muted);
+  padding: 8px 24px;
+  cursor: none;
+  transition: color 0.2s, background 0.2s;
+  border-left: 2px solid transparent;
+  display: block;
+  text-decoration: none;
+}
+.docs-nav-item:hover { color: var(--text); background: rgba(255,255,255,0.02); }
+.docs-nav-item.active { color: var(--cyan); border-left-color: var(--cyan); background: var(--cyan-dim); }
+
+.docs-content {
+  background: var(--surface2);
+  padding: 40px 48px;
+  min-height: 500px;
+}
+.docs-section { display: none; }
+.docs-section.active { display: block; }
+.docs-h1 { font-size: 28px; font-weight: 800; color: var(--white); margin-bottom: 8px; }
+.docs-h2 { font-size: 18px; font-weight: 700; color: var(--white); margin: 28px 0 10px; }
+.docs-lead { font-family: var(--mono); font-size: 13px; color: var(--muted); margin-bottom: 28px; line-height: 1.7; }
+.docs-p { font-family: var(--mono); font-size: 13px; color: var(--muted); margin-bottom: 16px; line-height: 1.8; }
+.docs-code {
+  background: #05050c;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px 24px;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text);
+  margin: 16px 0 24px;
+  overflow-x: auto;
+  line-height: 1.8;
+}
+.docs-code .dc { color: var(--cyan); }
+.docs-code .dp { color: #a78bfa; }
+.docs-code .dv { color: #fb923c; }
+.docs-code .dm { color: var(--muted); }
+.docs-inline { font-family: var(--mono); font-size: 12px; background: rgba(0,212,255,0.08); color: var(--cyan); padding: 2px 8px; border-radius: 4px; }
+
+/* CTA */
+.cta-section {
+  padding: 0 48px 120px;
+  text-align: center;
+}
+.cta-inner {
+  max-width: 700px;
+  margin: 0 auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 80px 60px;
+  position: relative;
+  overflow: hidden;
+}
+.cta-inner::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 300px; height: 300px;
+  background: radial-gradient(circle, rgba(0,212,255,0.1), transparent 70%);
+  pointer-events: none;
+}
+.cta-title {
+  font-size: clamp(32px, 5vw, 52px);
+  font-weight: 800;
+  color: var(--white);
+  margin-bottom: 20px;
+  letter-spacing: -0.02em;
+}
+.cta-sub {
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--muted);
+  margin-bottom: 40px;
+  line-height: 1.7;
+}
+
+/* Footer */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 40px 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  z-index: 1;
+}
+.footer-brand {
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--cyan);
+  letter-spacing: 0.1em;
+}
+.footer-links {
+  display: flex;
+  gap: 32px;
+  list-style: none;
+}
+.footer-links a {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.footer-links a:hover { color: var(--white); }
+.footer-copy {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted2);
+}
+
+/* Commands & Examples section */
+.commands-section { padding: 0 48px 140px; }
+.commands-inner { max-width: 1000px; margin: 0 auto; }
+
+.commands-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+.command-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 28px;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s ease, transform 0.5s ease, border-color 0.3s, background 0.3s;
+}
+.command-card.visible { opacity: 1; transform: none; }
+.command-card:hover { border-color: var(--border-bright); background: var(--surface2); }
+
+.command-name {
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--cyan);
+  font-weight: 500;
+  margin-bottom: 6px;
+  letter-spacing: 0.05em;
+}
+.command-desc {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 18px;
+  line-height: 1.7;
+}
+.command-code {
+  background: #05050c;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 18px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text);
+  overflow-x: auto;
+  line-height: 1.7;
+}
+.command-code .cf { color: #a78bfa; }
+.command-code .cv { color: #fb923c; }
+.command-code .cc { color: var(--muted2); }
+
+.example-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 32px;
+  justify-content: center;
+}
+.example-tag-pill {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  padding: 6px 14px;
+  border-radius: 100px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  background: var(--surface);
+  cursor: default;
+  transition: all 0.2s;
+}
+.example-tag-pill:hover { color: var(--cyan); border-color: var(--border-bright); background: var(--cyan-dim); }
+.example-tag-pill.active { color: var(--cyan); border-color: var(--border-bright); background: var(--cyan-dim); }
+
+.example-grid-large {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+.example-large-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px 28px;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.5s ease, transform 0.5s ease, border-color 0.3s;
+}
+.example-large-card.visible { opacity: 1; transform: none; }
+.example-large-card:hover { border-color: var(--border-bright); }
+
+.example-large-tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--cyan);
+  background: var(--cyan-dim);
+  padding: 4px 10px;
+  border-radius: 4px;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+}
+.example-large-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--white);
+  margin-bottom: 10px;
+}
+.example-large-goal {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.7;
+  font-style: italic;
+  border-left: 2px solid var(--border-bright);
+  padding-left: 14px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  nav { padding: 16px 24px; }
+  .nav-links { display: none; }
+  .hero { padding: 120px 24px 60px; }
+  .stats-inner { grid-template-columns: repeat(2, 1fr); }
+  .features-grid { grid-template-columns: 1fr; }
+  .providers-grid { grid-template-columns: 1fr; }
+  .docs-grid { grid-template-columns: 1fr; }
+  .docs-nav { border-right: none; border-bottom: 1px solid var(--border); }
+  .step-content { grid-template-columns: 1fr; }
+  footer { flex-direction: column; gap: 20px; text-align: center; }
+  .how, .features, .demo, .providers, .docs, .cta-section, .stats { padding-left: 24px; padding-right: 24px; }
+  body { cursor: auto; }
+  .cursor, .cursor-ring { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<nav id="nav">
+  <a href="#" class="nav-logo">SKOP<span>IX</span></a>
+  <ul class="nav-links">
+    <li><a href="#how">How it works</a></li>
+    <li><a href="#dashboard">Dashboard</a></li>
+    <li><a href="#team">Team mode</a></li>
+    <li><a href="#dedup">Dedup</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#self-host">Self-host</a></li>
+    <li><a href="#faq">FAQ</a></li>
+    <li><a href="./app/index.html" class="nav-cta">Open dashboard →</a></li>
+  </ul>
+</nav>
+<!-- HERO -->
+<section class="hero" id="home">
+  <div class="hero-glow"></div>
+  <div class="hero-glow2"></div>
+
+  <div class="hero-badge">
+    <span class="hero-badge-dot"></span>
+    AI-POWERED QA AGENT · v2.0 · MULTI-USER
+  </div>
+
+  <h1 class="hero-title">
+    Test like<br>
+    <span class="accent">a human.</span><br>
+    <span class="dim">Ship as a team.</span>
+  </h1>
+
+  <p class="hero-sub">
+    Skopix navigates your web app, judges UX quality, flags bugs,
+    creates tickets, and never duplicates. Self-host it for your team — no scripts, no selectors, no SaaS lock-in. Just a goal.
+  </p>
+
+  <div class="hero-actions">
+    <a href="./app/index.html" class="btn-primary">Open dashboard</a>
+    <a href="#features" class="btn-ghost">See features</a>
+  </div>
+
+  <div class="hero-command">
+    <span class="prompt">$ </span>
+    <span class="cmd">skopix run </span>
+    <span class="flag">--url </span>
+    <span>myapp.com </span>
+    <span class="flag">--goal </span>
+    <span>"log in and verify the dashboard loads"</span>
+  </div>
+
+  <div class="hero-scroll">
+    <span>SCROLL</span>
+    <div class="scroll-line"></div>
+  </div>
+</section>
+
+<!-- STATS -->
+<div class="stats">
+  <div class="stats-inner">
+    <div class="stat-item">
+      <div class="stat-num">£0</div>
+      <div class="stat-label">free &amp; self-hostable forever</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">5×</div>
+      <div class="stat-label">faster with parallel testing</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">∞</div>
+      <div class="stat-label">users in your workspace</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">3</div>
+      <div class="stat-label">roles: admin · editor · viewer</div>
+    </div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<section class="how" id="how">
+  <div class="how-inner">
+    <div class="section-label observe">HOW IT WORKS</div>
+    <h2 class="section-title observe">Seven steps.<br>One command.</h2>
+
+    <div class="steps-grid">
+      <div class="step-item observe">
+        <div class="step-num-col">01</div>
+        <div class="step-content">
+          <div class="step-text-title">You give it a goal</div>
+          <div class="step-text-body">Plain English. No XPaths, no CSS selectors, no waits. "Log in, search for headphones, and add the cheapest to cart."</div>
+        </div>
+      </div>
+      <div class="step-item observe">
+        <div class="step-num-col">02</div>
+        <div class="step-content">
+          <div class="step-text-title">It opens a browser</div>
+          <div class="step-text-body">Real Chromium via Playwright. Headed by default so you can watch, headless when you want speed.</div>
+        </div>
+      </div>
+      <div class="step-item observe">
+        <div class="step-num-col">03</div>
+        <div class="step-content">
+          <div class="step-text-title">It reads the page</div>
+          <div class="step-text-body">Every step it extracts a structured DOM snapshot — clickables, inputs, headings, errors. No screenshots sent to the LLM.</div>
+        </div>
+      </div>
+      <div class="step-item observe">
+        <div class="step-num-col">04</div>
+        <div class="step-content">
+          <div class="step-text-title">The AI decides what to do next</div>
+          <div class="step-text-body">Gemini, Claude, or OpenAI receive the page state plus the goal. They return one or more actions: TYPE, CLICK, SCROLL, OBSERVE, BATCH.</div>
+        </div>
+      </div>
+      <div class="step-item observe">
+        <div class="step-num-col">05</div>
+        <div class="step-content">
+          <div class="step-text-title">It acts and observes</div>
+          <div class="step-text-body">Skopix executes the action, captures a screenshot, waits for the page to settle, then loops back to step 3 with the new state.</div>
+        </div>
+      </div>
+      <div class="step-item observe">
+        <div class="step-num-col">06</div>
+        <div class="step-content">
+          <div class="step-text-title">It flags issues as it sees them</div>
+          <div class="step-text-body">Broken images, console errors, slow loads, broken auth — anything that shouldn't be there gets recorded with severity, type, and screenshot.</div>
+        </div>
+      </div>
+      <div class="step-item observe">
+        <div class="step-num-col">07</div>
+        <div class="step-content">
+          <div class="step-text-title">You get a full report</div>
+          <div class="step-text-body">HTML report with every step, screenshot, video recording, and issue list. Issues automatically pushed to GitHub, Jira, or Linear — without duplicates.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DASHBOARD UI -->
+<section class="features" id="dashboard">
+  <div class="how-inner">
+    <div class="section-label observe">THE DASHBOARD</div>
+    <h2 class="section-title observe">A full UI<br>for your QA team.</h2>
+    <p class="hero-sub observe" style="text-align:center;margin:0 auto 60px;max-width:700px">
+      Skopix isn't just a CLI. The dashboard runs locally on port 9000 and gives you a complete visual workspace
+      for managing tests, suites, runs, credentials, and issues. Open it any time with <code style="color:var(--cyan);font-family:var(--mono);background:var(--cyan-dim);padding:2px 8px;border-radius:4px">skopix dashboard</code>.
+    </p>
+
+    <div class="features-grid">
+      <div class="feature-card observe">
+        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg></div>
+        <div class="feature-title">Live Dashboard</div>
+        <div class="feature-desc">Test stats at a glance — pass rate, total runs, issues found, average duration. Recent sessions list with one-click access to reports and re-runs.</div>
+      </div>
+
+      <div class="feature-card observe">
+        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div>
+        <div class="feature-title">All Tests view</div>
+        <div class="feature-desc">Universal flat table showing every test across every suite plus standalone tests. Search by name or goal, filter by scope, tags, or credentials. Sortable columns.</div>
+      </div>
+
+      <div class="feature-card observe">
+        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg></div>
+        <div class="feature-title">Test suites</div>
+        <div class="feature-desc">Group related tests into suites. Run them all in one click — sequentially or in parallel. Suite-level defaults for URL, credentials, headless mode, and trackers.</div>
+      </div>
+
+      <div class="feature-card observe">
+        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="3 12 8 7 13 12 18 7 21 10"/><path d="M3 17l4-4 4 4 4-4 4 4"/></svg></div>
+        <div class="feature-title">Suite runs history</div>
+        <div class="feature-desc">Every suite execution recorded with grouped pass/fail bar visualisation. Click in to see per-test results, durations, status, and direct links to individual session reports.</div>
+      </div>
+
+      <div class="feature-card observe">
+        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+        <div class="feature-title">Live "Running" view</div>
+        <div class="feature-desc">When a test or suite is active, a Running tab appears with a pulsing indicator. Watch the agent work in real time with a 520px-tall console. Copy output before navigating away.</div>
+      </div>
+
+      <div class="feature-card observe">
+        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>
+        <div class="feature-title">Credentials vault</div>
+        <div class="feature-desc">Save logins by name in <code style="font-family:var(--mono);font-size:11px;color:var(--cyan)">~/.skopix/credentials.yaml</code> with restricted file permissions. Tests reference them by name only — values never appear in test files, logs, or screenshots.</div>
+      </div>
+
+      <div class="feature-card observe">
+        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+        <div class="feature-title">Issues view</div>
+        <div class="feature-desc">Every issue raised across all tests. Filter by status, tracker, severity. See occurrence counts. Sync from GitHub/Jira/Linear with one click. Mark resolved manually or close on tracker.</div>
+      </div>
+
+      <div class="feature-card observe">
+        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
+        <div class="feature-title">Unified test editor</div>
+        <div class="feature-desc">One modal handles every test — standalone or in a suite. Set URL, goal, credentials, max steps, tags, trackers (GitHub/Jira/Linear), headless mode. "Save and run" runs immediately.</div>
+      </div>
+
+      <div class="feature-card observe">
+        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></div>
+        <div class="feature-title">Batch operations</div>
+        <div class="feature-desc">Tick checkboxes on sessions or suite runs to bulk delete with the floating action bar. Cascade option to delete sessions linked to a suite run together.</div>
+      </div>
+
+      <div class="feature-card observe">
+        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="15 19 12 22 9 19"/><polyline points="19 9 22 12 19 15"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/></svg></div>
+        <div class="feature-title">Move &amp; reorganise</div>
+        <div class="feature-desc">Drag tests between suites. Move from "saved" to a suite or vice versa. Rename suites without breaking references. Duplicate any suite as a starting point.</div>
+      </div>
+
+      <div class="feature-card observe">
+        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+        <div class="feature-title">Rich session reports</div>
+        <div class="feature-desc">Every test run produces a standalone HTML report with screenshots per step, video recording of the full session, AI reasoning, action results, and detected issues with severity.</div>
+      </div>
+
+      <div class="feature-card observe">
+        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg></div>
+        <div class="feature-title">One-click re-run</div>
+        <div class="feature-desc">Re-run any past session with the same goal and credentials. Useful for verifying fixes or re-checking flaky behaviour.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TEAM MODE -->
+<section class="features" id="team" style="border-top:1px solid var(--border)">
+  <div class="how-inner">
+    <div class="section-label observe">TEAM MODE</div>
+    <h2 class="section-title observe">Built for<br>QA teams.</h2>
+    <p class="hero-sub observe" style="text-align:center;margin:0 auto 60px;max-width:780px">
+      Skopix runs as a single tool you self-host. Anyone you invite joins the same workspace — sharing tests, suites, reports, and issues in real time.
+      Each user has their own login, their own API tokens, and their own role.
+      <strong style="color:var(--text)">Single-user mode is also fully supported</strong> — team mode is opt-in via <code style="font-family:var(--mono);color:var(--cyan);background:var(--cyan-dim);padding:2px 8px;border-radius:4px">--team</code> flag.
+    </p>
+
+    <div class="features-grid">
+      <div class="feature-card observe">
+        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>
+        <div class="feature-title">Secure login &amp; sessions</div>
+        <div class="feature-desc">Email + password authentication with scrypt-hashed passwords (no plaintext, no third-party auth dependency). HTTP-only session cookies with 30-day expiry. Sessions invalidated when accounts are disabled or removed.</div>
+      </div>
+
+      <div class="feature-card observe">
+        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg></div>
+        <div class="feature-title">Invite teammates with one link</div>
+        <div class="feature-desc">Admins generate invite links from the Users page. New members visit the link, set their own name and password — they're auto-logged in and joined to the workspace. No SMTP required.</div>
+      </div>
+
+      <div class="feature-card observe">
+        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s-8-4-8-12V5l8-3 8 3v5c0 8-8 12-8 12z"/></svg></div>
+        <div class="feature-title">Three roles: admin, editor, viewer</div>
+        <div class="feature-desc"><strong style="color:var(--text)">Admin</strong> manages users, full access. <strong style="color:var(--text)">Editor</strong> creates &amp; runs tests, manages suites. <strong style="color:var(--text)">Viewer</strong> is read-only — perfect for QA leads and stakeholders. Write controls are hidden from viewers entirely (not just disabled).</div>
+      </div>
+
+      <div class="feature-card observe">
+        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+        <div class="feature-title">Run attribution</div>
+        <div class="feature-desc">Every test run records who triggered it. Reports show "Run by Adil · 14:32". Audit log captures logins, role changes, deletions, and every administrative action. Know exactly what happened and who did it.</div>
+      </div>
+
+      <div class="feature-card observe">
+        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6"/><path d="M3.51 9a9 9 0 0114.85-3.36M20.49 15a9 9 0 01-14.85 3.36"/></svg></div>
+        <div class="feature-title">Real-time shared workspace</div>
+        <div class="feature-desc">Tests run on the server, not the user's machine. When Bob runs a suite, Alice sees it in her dashboard immediately. Reports, suite runs, and issues are all shared instantly across the team.</div>
+      </div>
+
+      <div class="feature-card observe">
+        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5"/><line x1="12" y1="22" x2="12" y2="15.5"/></svg></div>
+        <div class="feature-title">SQLite database</div>
+        <div class="feature-desc">User accounts, sessions, invites, and audit logs stored locally in a single SQLite file at <code style="font-family:var(--mono);font-size:11px;color:var(--cyan)">~/.skopix/skopix.db</code>. No Postgres setup. No external services. Move it with the rest of your data.</div>
+      </div>
+    </div>
+
+    <div class="observe" style="margin-top:60px;padding:32px;background:var(--surface);border:1px solid var(--border);border-radius:14px;max-width:900px;margin-left:auto;margin-right:auto">
+      <div style="font-family:var(--mono);font-size:11px;color:var(--cyan);letter-spacing:0.15em;margin-bottom:14px">START TEAM MODE</div>
+      <div style="font-family:var(--mono);font-size:13px;line-height:1.9;color:var(--text)">
+        <div><span style="color:var(--cyan)">$</span> <span style="color:var(--purple)">SKOPIX_SECRET_KEY</span>=<span style="color:var(--text)">"your-random-secret-min-16-chars"</span> \</div>
+        <div style="margin-left:24px">skopix dashboard <span style="color:var(--purple)">--team --host 0.0.0.0</span></div>
+      </div>
+      <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:18px;line-height:1.7">
+        First person to visit <code style="color:var(--cyan)">/setup</code> becomes the admin. Then invite your team from the Users page. Each user signs in at <code style="color:var(--cyan)">/login</code>.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PER-USER TOKENS -->
+<section class="features" id="per-user-tokens" style="border-top:1px solid var(--border)">
+  <div class="how-inner">
+    <div class="section-label observe">PER-USER TOKENS</div>
+    <h2 class="section-title observe">Your API keys.<br>Your tokens.</h2>
+    <p class="hero-sub observe" style="text-align:center;margin:0 auto 60px;max-width:780px">
+      Workspace-wide tokens in <code style="color:var(--cyan);font-family:var(--mono);background:var(--cyan-dim);padding:2px 8px;border-radius:4px">.skopix.env</code> work as defaults for the whole team.
+      Individual users can override with their own — encrypted at rest, never visible to anyone else, even admins.
+    </p>
+
+    <div class="features-grid">
+      <div class="feature-card observe">
+        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>
+        <div class="feature-title">AES-256-GCM encrypted</div>
+        <div class="feature-desc">Every stored token is encrypted with a key derived from <code style="font-family:var(--mono);font-size:11px;color:var(--cyan)">SKOPIX_SECRET_KEY</code>. Only the decryption layer ever sees plaintext. If someone gets your database file, they get encrypted bytes — not your tokens.</div>
+      </div>
+
+      <div class="feature-card observe">
+        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg></div>
+        <div class="feature-title">User-first, workspace fallback</div>
+        <div class="feature-desc">When a test runs, Skopix checks for the user's personal token. If found, uses it. If not, falls back to the workspace default. Same dashboard, same suite, but Bob's GitHub issues are created as Bob, and Alice's as Alice.</div>
+      </div>
+
+      <div class="feature-card observe">
+        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg></div>
+        <div class="feature-title">Private to each user</div>
+        <div class="feature-desc">Admins can see <em>which</em> tokens a user has set, but never the values. No "god mode" — even the workspace owner can't read other users' personal credentials. Each user manages their own from their Settings page.</div>
+      </div>
+
+      <div class="feature-card observe">
+        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>
+        <div class="feature-title">Supported integrations</div>
+        <div class="feature-desc">GitHub token, Jira email + API token, Linear API key. Gemini, Claude, OpenAI API keys (so each user can use their own LLM quota). Workspace base URLs and project keys stay shared because those are team-level.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PARALLEL TESTING -->
+<section class="how" style="border-top:1px solid var(--border)">
+  <div class="how-inner">
+    <div class="section-label observe">PARALLEL TESTING</div>
+    <h2 class="section-title observe">Run up to 5<br>tests at once.</h2>
+    <p class="hero-sub observe" style="text-align:center;margin:0 auto 60px;max-width:700px">
+      Slow tests are dead tests. Skopix supports running multiple tests in parallel, each in its own browser instance with full isolation.
+      Configure your suite's "Max parallel tests" slider in the dashboard, or use <code style="color:var(--cyan);font-family:var(--mono);background:var(--cyan-dim);padding:2px 8px;border-radius:4px">--parallel N</code> from the CLI.
+    </p>
+
+    <div class="features-grid">
+      <div class="feature-card observe">
+        <div class="feature-num" style="font-family:var(--mono);font-size:48px;color:var(--cyan);font-weight:300;margin-bottom:12px">1×</div>
+        <div class="feature-title">Sequential (default)</div>
+        <div class="feature-desc">Run tests one at a time. Easiest to follow with a clean console. Best for small suites or when you're watching the agent live.</div>
+      </div>
+      <div class="feature-card observe">
+        <div class="feature-num" style="font-family:var(--mono);font-size:48px;color:var(--cyan);font-weight:300;margin-bottom:12px">3×</div>
+        <div class="feature-title">Recommended</div>
+        <div class="feature-desc">Three workers running simultaneously. Best balance of speed and resource use for typical setups. Console output is tagged <code style="font-family:var(--mono);font-size:11px;color:var(--cyan)">[T1]</code>, <code style="font-family:var(--mono);font-size:11px;color:var(--cyan)">[T2]</code>, <code style="font-family:var(--mono);font-size:11px;color:var(--cyan)">[T3]</code> so you can follow each.</div>
+      </div>
+      <div class="feature-card observe">
+        <div class="feature-num" style="font-family:var(--mono);font-size:48px;color:var(--cyan);font-weight:300;margin-bottom:12px">5×</div>
+        <div class="feature-title">Maximum throughput</div>
+        <div class="feature-desc">Five workers — best for large suites on a paid LLM tier with at least 16GB RAM. Watch out for rate limits on the free Gemini tier.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ISSUE DEDUP -->
+<section class="features" id="dedup" style="border-top:1px solid var(--border)">
+  <div class="how-inner">
+    <div class="section-label observe">SMART ISSUE DEDUPLICATION</div>
+    <h2 class="section-title observe">Never duplicate<br>a bug ticket again.</h2>
+    <p class="hero-sub observe" style="text-align:center;margin:0 auto 60px;max-width:760px">
+      Most QA tools spam your tracker with duplicates every time a flaky bug recurs. Skopix uses a three-stage pipeline to detect when an issue has already been raised
+      — and comments on the existing ticket instead of creating a fresh one. Closed tickets respected as resolved (regression signal).
+    </p>
+
+    <div class="features-grid">
+      <div class="feature-card observe">
+        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="feature-title">Stage 1 — Fingerprint match</div>
+        <div class="feature-desc">Each issue gets a deterministic SHA-256 fingerprint based on suite name, test name, URL hostname/path, type, and a normalised title. Identical phrasing matches instantly.</div>
+      </div>
+
+      <div class="feature-card observe">
+        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+        <div class="feature-title">Stage 2 — URL-scoped filter</div>
+        <div class="feature-desc">"Failed to load resource" on Site A and Site B should be different tickets. Skopix filters candidate issues to those with the same hostname AND pathname before semantic comparison.</div>
+      </div>
+
+      <div class="feature-card observe">
+        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 11H1l8-8 8 8h-8v10z" transform="rotate(135 9 9)"/><circle cx="12" cy="12" r="10"/></svg></div>
+        <div class="feature-title">Stage 3 — Semantic match (LLM)</div>
+        <div class="feature-desc">If candidates exist, Gemini Flash Lite compares the new issue against them. "Broken images" vs "Images failed to load" vs "404 errors on image resources" — all recognised as the same bug.</div>
+      </div>
+
+      <div class="feature-card observe">
+        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg></div>
+        <div class="feature-title">Auto-sync from trackers</div>
+        <div class="feature-desc">Before adding a comment, Skopix verifies the issue is still open on GitHub/Jira/Linear. If it's been closed, that's a regression — Skopix creates a fresh ticket.</div>
+      </div>
+
+      <div class="feature-card observe">
+        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+        <div class="feature-title">Local issue store</div>
+        <div class="feature-desc">Records kept in <code style="font-family:var(--mono);font-size:11px;color:var(--cyan)">skopix-reports/.issues/issues.json</code> with fingerprint, tracker ref, status, occurrence count, and last 20 session IDs. Source of truth for dedup.</div>
+      </div>
+
+      <div class="feature-card observe">
+        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg></div>
+        <div class="feature-title">Recurrence comments</div>
+        <div class="feature-desc">When a known issue recurs, Skopix adds a comment with timestamp, suite, test, and session ID. Your team sees how often it's happening — useful signal for prioritisation.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- INTEGRATIONS -->
+<section class="providers" id="integrations">
+  <div class="how-inner">
+    <div class="section-label observe">INTEGRATIONS</div>
+    <h2 class="section-title observe">Push to wherever<br>your team lives.</h2>
+
+    <div class="features-grid">
+      <div class="feature-card observe">
+        <div class="feature-title">GitHub Issues</div>
+        <div class="feature-desc">Auto-creates issues with severity labels, full session context, and a hidden fingerprint for dedup. Set <code style="font-family:var(--mono);font-size:11px;color:var(--cyan)">GITHUB_TOKEN</code> and <code style="font-family:var(--mono);font-size:11px;color:var(--cyan)">GITHUB_REPO</code> in <code style="font-family:var(--mono);font-size:11px;color:var(--cyan)">.skopix.env</code>.</div>
+      </div>
+      <div class="feature-card observe">
+        <div class="feature-title">Jira</div>
+        <div class="feature-desc">Bug-type tickets with priority mapping (critical → Highest, high → High, etc). Works with Jira Cloud and Server. Auto-detects Done transition for closing.</div>
+      </div>
+      <div class="feature-card observe">
+        <div class="feature-title">Linear</div>
+        <div class="feature-desc">GraphQL-based integration with priority mapping. Comments on existing issues for recurrence. Status sync from completed/canceled states.</div>
+      </div>
+      <div class="feature-card observe" style="opacity:0.6">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+          <div class="feature-title">GitLab</div>
+          <span style="font-family:var(--mono);font-size:9px;letter-spacing:0.1em;padding:3px 8px;border-radius:4px;background:var(--purple-dim);color:var(--purple);text-transform:uppercase">Coming soon</span>
+        </div>
+        <div class="feature-desc">Self-hosted and gitlab.com both supported. Same dedup pipeline, same workspace/per-user token model. On the roadmap.</div>
+      </div>
+    </div>
+
+    <p class="hero-sub observe" style="text-align:center;margin:50px auto 0;max-width:700px;color:var(--muted)">
+      Toggle trackers per-test in the editor or set suite-level defaults. Workspace-wide tokens go in <code style="color:var(--cyan);font-family:var(--mono)">.skopix.env</code>; each user can override with their own token in team mode.
+    </p>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features" id="features">
+  <div class="how-inner">
+    <div class="section-label observe">FEATURES</div>
+    <h2 class="section-title observe">Everything you need<br>to ship faster.</h2>
+
+    <div class="features-grid">
+      <div class="feature-card observe">
+        <div class="feature-title">Multi-LLM support</div>
+        <div class="feature-desc">Gemini (free tier supported), Claude, and OpenAI. Switch per-test or per-suite. Same agent loop, same DOM extraction — just swap the brain.</div>
+      </div>
+      <div class="feature-card observe">
+        <div class="feature-title">Headless or headed</div>
+        <div class="feature-desc">Watch the agent work in a real browser, or run silently in headless mode for CI. Toggle per-test or per-suite. Headless is faster and uses less RAM.</div>
+      </div>
+      <div class="feature-card observe">
+        <div class="feature-title">Goal-based pass/fail</div>
+        <div class="feature-desc">Test passes if the goal is achieved. Issues found during the test are reported separately as observations — they don't fail the test unless the goal itself failed.</div>
+      </div>
+      <div class="feature-card observe">
+        <div class="feature-title">Auto-detect login flows</div>
+        <div class="feature-desc">Skopix recognises login goals and auto-detects success (post-login content, URL change) or failure (error messages, still on login page) — stops early instead of looping for 20 steps.</div>
+      </div>
+      <div class="feature-card observe">
+        <div class="feature-title">Smart issue flagging</div>
+        <div class="feature-desc">The agent flags broken images, JS errors, console errors, slow loads, broken links, missing elements, accessibility issues — with severity, type, screenshot, and step number.</div>
+      </div>
+      <div class="feature-card observe">
+        <div class="feature-title">Tag-based organisation</div>
+        <div class="feature-desc">Tag tests with smoke/regression/critical/whatever. Filter All Tests by tag. Build smoke-test suites by selecting tagged tests.</div>
+      </div>
+      <div class="feature-card observe">
+        <div class="feature-title">Video recording</div>
+        <div class="feature-desc">Every session records video of the browser. Watch back to see exactly what happened. Useful for debugging flaky tests or understanding agent behaviour.</div>
+      </div>
+      <div class="feature-card observe">
+        <div class="feature-title">DOM-first, screenshots later</div>
+        <div class="feature-desc">The LLM receives structured DOM data (clickables, inputs, headings, errors) — not screenshots. Faster, cheaper, more reliable than vision-based agents. Screenshots saved for the report only.</div>
+      </div>
+      <div class="feature-card observe">
+        <div class="feature-title">Resilient to changes</div>
+        <div class="feature-desc">No CSS selectors to maintain. The agent re-evaluates the page on every step. UI redesigns won't break tests as long as the goal is still achievable.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SELF-HOST -->
+<section class="features" id="self-host" style="border-top:1px solid var(--border)">
+  <div class="how-inner">
+    <div class="section-label observe">SELF-HOST</div>
+    <h2 class="section-title observe">Run it<br>your way.</h2>
+    <p class="hero-sub observe" style="text-align:center;margin:0 auto 60px;max-width:780px">
+      Skopix is genuinely self-hosted. No telemetry, no phone-home, no SaaS dependency. Your data stays on your hardware. Deploy how you like — laptop, NAS, office server, cloud VM, or Docker.
+    </p>
+
+    <div class="features-grid">
+      <div class="feature-card observe">
+        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
+        <div class="feature-title">Solo developer · laptop</div>
+        <div class="feature-desc">Just run <code style="font-family:var(--mono);font-size:11px;color:var(--cyan)">skopix dashboard</code>. Default single-user mode, no login, no setup. Perfect for personal projects, side hustles, freelance QA work. Zero ceremony.</div>
+      </div>
+
+      <div class="feature-card observe">
+        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg></div>
+        <div class="feature-title">Small team · spare laptop or NAS</div>
+        <div class="feature-desc">For 2-10 person QA teams. An old MacBook in the office, a Synology NAS, a Raspberry Pi 5 — anything that stays on. Run with <code style="font-family:var(--mono);font-size:11px;color:var(--cyan)">--team --host 0.0.0.0</code> and your team connects at <code style="font-family:var(--mono);font-size:11px;color:var(--cyan)">http://&lt;ip&gt;:9000</code>.</div>
+      </div>
+
+      <div class="feature-card observe">
+        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0018 0V5"/><path d="M3 12a9 3 0 0018 0"/></svg></div>
+        <div class="feature-title">Bigger team · cloud VM</div>
+        <div class="feature-desc">Hetzner Cloud (£4/mo), DigitalOcean, Fly.io, Railway, AWS EC2 — any small Linux VM. 2GB RAM minimum for browser automation. Bind to <code style="font-family:var(--mono);font-size:11px;color:var(--cyan)">0.0.0.0</code>, put behind nginx/Caddy with HTTPS, you've got a proper internal QA platform.</div>
+      </div>
+
+      <div class="feature-card observe">
+        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="21.17" y1="8" x2="12" y2="8"/><line x1="3.95" y1="6.06" x2="8.54" y2="14"/><line x1="10.88" y1="21.94" x2="15.46" y2="14"/></svg></div>
+        <div class="feature-title">Docker · one command</div>
+        <div class="feature-desc">Multi-arch image (amd64 + arm64) published to GitHub Container Registry. Pull, mount a volume, set your secret key — running in 90 seconds. Includes Caddy + auto-HTTPS recipe for production deployments.</div>
+      </div>
+
+      <div class="feature-card observe">
+        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
+        <div class="feature-title">Your data, your backups</div>
+        <div class="feature-desc">Everything lives in two places: <code style="font-family:var(--mono);font-size:11px;color:var(--cyan)">~/.skopix/skopix.db</code> (users, sessions, secrets) and <code style="font-family:var(--mono);font-size:11px;color:var(--cyan)">./skopix-reports/</code> (reports, videos, issues). Back both up, you've backed up Skopix. Move them to a new server, you're up and running.</div>
+      </div>
+
+      <div class="feature-card observe">
+        <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s-8-4-8-12V5l8-3 8 3v5c0 8-8 12-8 12z"/><polyline points="9 12 11 14 15 10"/></svg></div>
+        <div class="feature-title">No telemetry, no calls home</div>
+        <div class="feature-desc">Skopix never contacts our servers. Page DOM goes to your chosen LLM provider, issues go to your tracker, that's it. We don't even know you're running it. Audit the code on GitHub if you want — it's all open.</div>
+      </div>
+    </div>
+
+    <div class="observe" style="margin-top:60px;display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:20px;max-width:1200px;margin-left:auto;margin-right:auto">
+      <div style="padding:28px;background:var(--surface);border:1px solid var(--border);border-radius:14px">
+        <div style="font-family:var(--mono);font-size:11px;color:var(--cyan);letter-spacing:0.15em;margin-bottom:14px">SOLO · NPM</div>
+        <div style="font-family:var(--mono);font-size:13px;line-height:1.9;color:var(--text)">
+          <div><span style="color:var(--cyan)">$</span> npm install -g skopix</div>
+          <div><span style="color:var(--cyan)">$</span> skopix init</div>
+          <div><span style="color:var(--cyan)">$</span> skopix dashboard</div>
+        </div>
+        <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:14px;line-height:1.7">
+          Dashboard opens at <code style="color:var(--cyan)">localhost:9000</code>. No auth, no users.
+        </div>
+      </div>
+
+      <div style="padding:28px;background:var(--surface);border:1px solid var(--border);border-radius:14px">
+        <div style="font-family:var(--mono);font-size:11px;color:var(--cyan);letter-spacing:0.15em;margin-bottom:14px">TEAM · DOCKER (RECOMMENDED)</div>
+        <div style="font-family:var(--mono);font-size:12px;line-height:1.9;color:var(--text);overflow-x:auto">
+          <div><span style="color:var(--cyan)">$</span> docker run -d \</div>
+          <div style="margin-left:18px">--name skopix -p 9000:9000 \</div>
+          <div style="margin-left:18px">-v ~/skopix-data:/data \</div>
+          <div style="margin-left:18px">-e <span style="color:var(--purple)">SKOPIX_SECRET_KEY</span>=<span style="color:var(--text)">"$(openssl rand -base64 32)"</span> \</div>
+          <div style="margin-left:18px">-e <span style="color:var(--purple)">SKOPIX_TEAM_MODE</span>=true \</div>
+          <div style="margin-left:18px">ghcr.io/x444dyx/skopix:latest</div>
+        </div>
+        <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:14px;line-height:1.7">
+          Visit <code style="color:var(--cyan)">http://&lt;your-ip&gt;:9000/setup</code> to create the admin. Multi-arch image, amd64 + arm64.
+        </div>
+      </div>
+
+      <div style="padding:28px;background:var(--surface);border:1px solid var(--border);border-radius:14px;grid-column:1 / -1">
+        <div style="font-family:var(--mono);font-size:11px;color:var(--cyan);letter-spacing:0.15em;margin-bottom:14px">PRODUCTION · DOCKER COMPOSE + CADDY (AUTO-HTTPS)</div>
+        <div style="font-family:var(--mono);font-size:12px;line-height:1.7;color:var(--text);overflow-x:auto;background:var(--bg);padding:16px;border-radius:8px;border:1px solid var(--border)">
+<pre style="margin:0;color:var(--text);font-family:var(--mono);font-size:12px;line-height:1.6"><span style="color:var(--muted)"># docker-compose.yml</span>
+services:
+  skopix:
+    image: ghcr.io/x444dyx/skopix:latest
+    restart: unless-stopped
+    expose: [<span style="color:var(--purple)">"9000"</span>]
+    volumes: [<span style="color:var(--purple)">./skopix-data:/data</span>]
+    environment:
+      SKOPIX_SECRET_KEY: <span style="color:var(--purple)">${SKOPIX_SECRET_KEY}</span>
+      SKOPIX_TEAM_MODE: <span style="color:var(--purple)">"true"</span>
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports: [<span style="color:var(--purple)">"80:80"</span>, <span style="color:var(--purple)">"443:443"</span>]
+    volumes:
+      - <span style="color:var(--purple)">./Caddyfile:/etc/caddy/Caddyfile</span>
+      - <span style="color:var(--purple)">caddy_data:/data</span>
+volumes:
+  caddy_data:
+
+<span style="color:var(--muted)"># Caddyfile (replace with your domain)</span>
+skopix.yourcompany.com {
+    reverse_proxy skopix:9000
+}
+
+<span style="color:var(--cyan)">$</span> docker compose up -d</pre>
+        </div>
+        <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:14px;line-height:1.7">
+          Point DNS at your server, run the command, visit <code style="color:var(--cyan)">https://your-domain</code>. Caddy fetches a Let's Encrypt cert automatically — no certbot, no cron, no manual renewal. Full guide: <a href="https://github.com/x444dyx/skopix/blob/main/DOCKER.md" style="color:var(--cyan)">DOCKER.md</a>.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- COMMANDS -->
+<section class="commands-section" id="commands">
+  <div class="how-inner">
+    <div class="section-label observe">COMMANDS</div>
+    <h2 class="section-title observe">Six commands.<br>That's the whole CLI.</h2>
+
+    <div class="commands-grid">
+      <div class="command observe">
+        <div class="cmd-name">skopix dashboard</div>
+        <div class="cmd-desc">Launch the local web dashboard at <span class="mono">localhost:9000</span>. Auto-opens in your browser.</div>
+      </div>
+      <div class="command observe">
+        <div class="cmd-name">skopix init</div>
+        <div class="cmd-desc">Interactive setup wizard. Configures LLM provider, API keys, and tracker integrations into <span class="mono">.skopix.env</span>.</div>
+      </div>
+      <div class="command observe">
+        <div class="cmd-name">skopix run</div>
+        <div class="cmd-desc">Run a single test. Flags: <span class="mono">--url</span>, <span class="mono">--goal</span>, <span class="mono">--credentials</span>, <span class="mono">--headless</span>, <span class="mono">--github</span>, <span class="mono">--jira</span>, <span class="mono">--linear</span>.</div>
+      </div>
+      <div class="command observe">
+        <div class="cmd-name">skopix suite</div>
+        <div class="cmd-desc">Run a saved suite from YAML. Use <span class="mono">--parallel N</span> to run N tests at the same time.</div>
+      </div>
+      <div class="command observe">
+        <div class="cmd-name">skopix report</div>
+        <div class="cmd-desc">Open the most recent HTML report in your browser.</div>
+      </div>
+      <div class="command observe">
+        <div class="cmd-name">skopix config</div>
+        <div class="cmd-desc">List, set, or unset any config value. Use <span class="mono">--list</span> to see all current values.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- EXAMPLES -->
+<section class="commands-section" id="examples-section">
+  <div class="how-inner">
+    <div class="section-label observe">EXAMPLES</div>
+    <h2 class="section-title observe">Goals you can copy-paste.</h2>
+
+    <div class="commands-grid">
+      <div class="command observe">
+        <div class="cmd-name">Login &amp; verify dashboard</div>
+        <div class="cmd-desc"><span class="mono" style="color:var(--cyan)">"log in with the provided credentials and verify the dashboard loads with charts visible"</span></div>
+      </div>
+      <div class="command observe">
+        <div class="cmd-name">Negative login test</div>
+        <div class="cmd-desc"><span class="mono" style="color:var(--cyan)">"attempt to log in with invalid credentials and verify the login is rejected with an error message"</span></div>
+      </div>
+      <div class="command observe">
+        <div class="cmd-name">Verify resources load</div>
+        <div class="cmd-desc"><span class="mono" style="color:var(--cyan)">"verify all images on the page load successfully and check for any broken resources"</span></div>
+      </div>
+      <div class="command observe">
+        <div class="cmd-name">E-commerce checkout</div>
+        <div class="cmd-desc"><span class="mono" style="color:var(--cyan)">"add the first item to the cart, proceed to checkout as guest, and verify the order summary is correct"</span></div>
+      </div>
+      <div class="command observe">
+        <div class="cmd-name">Search functionality</div>
+        <div class="cmd-desc"><span class="mono" style="color:var(--cyan)">"search for 'wireless headphones' and verify at least 5 results appear with prices visible"</span></div>
+      </div>
+      <div class="command observe">
+        <div class="cmd-name">Form validation</div>
+        <div class="cmd-desc"><span class="mono" style="color:var(--cyan)">"submit the contact form with an invalid email address and verify a clear error message appears"</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="docs" id="faq">
+  <div class="how-inner">
+    <div class="section-label observe">FAQ</div>
+    <h2 class="section-title observe">Common questions.</h2>
+
+    <div style="display:flex;flex-direction:column;gap:24px;max-width:900px;margin:60px auto 0">
+      <details class="observe" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px 28px;cursor:pointer">
+        <summary style="font-family:var(--display);font-size:18px;font-weight:600;color:var(--white);list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center">
+          <span>How is this different from Playwright/Cypress/Selenium?</span>
+          <span style="color:var(--cyan);font-family:var(--mono)">+</span>
+        </summary>
+        <div style="margin-top:16px;color:var(--muted);font-family:var(--mono);font-size:13px;line-height:1.7">
+          Traditional tools require you to write deterministic scripts: "click button with ID #submit". Skopix uses an LLM to navigate based on a goal. There are no selectors to maintain — when your UI changes, Skopix adapts. It's slower and probabilistic, but ideal for flows where the exact path varies (signups, checkout, multi-step wizards) and for catching UX issues humans would notice (broken images, slow loads, confusing copy).
+        </div>
+      </details>
+
+      <details class="observe" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px 28px;cursor:pointer">
+        <summary style="font-family:var(--display);font-size:18px;font-weight:600;color:var(--white);list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center">
+          <span>How much does it cost to run?</span>
+          <span style="color:var(--cyan);font-family:var(--mono)">+</span>
+        </summary>
+        <div style="margin-top:16px;color:var(--muted);font-family:var(--mono);font-size:13px;line-height:1.7">
+          With Gemini's free tier — £0. The free tier allows 15 requests per minute, enough for a few sequential tests. For paid tiers: each test typically uses 3-15 LLM calls. On Gemini Pro that's fractions of a penny per test. Claude Sonnet is more expensive (~5p per test). The dashboard, browser automation, reports, video recording — all free.
+        </div>
+      </details>
+
+      <details class="observe" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px 28px;cursor:pointer">
+        <summary style="font-family:var(--display);font-size:18px;font-weight:600;color:var(--white);list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center">
+          <span>Where are my credentials stored?</span>
+          <span style="color:var(--cyan);font-family:var(--mono)">+</span>
+        </summary>
+        <div style="margin-top:16px;color:var(--muted);font-family:var(--mono);font-size:13px;line-height:1.7">
+          In <code style="color:var(--cyan)">~/.skopix/credentials.yaml</code> with file permissions set to 0600 (your user only). They never leave your machine. Tests reference them by name — the values are passed to the agent at run time via a temp file that's deleted after 60 seconds. Suite YAMLs are safe to commit to git: only credential set names appear, never values.
+        </div>
+      </details>
+
+      <details class="observe" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px 28px;cursor:pointer">
+        <summary style="font-family:var(--display);font-size:18px;font-weight:600;color:var(--white);list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center">
+          <span>Will it duplicate issues every time a test fails?</span>
+          <span style="color:var(--cyan);font-family:var(--mono)">+</span>
+        </summary>
+        <div style="margin-top:16px;color:var(--muted);font-family:var(--mono);font-size:13px;line-height:1.7">
+          No. Skopix has a three-stage dedup pipeline: exact fingerprint match → URL-scoped filter (same site &amp; page only) → LLM semantic comparison. Recurring issues comment on the existing tracker ticket instead of creating duplicates. If you close the ticket on GitHub/Jira/Linear, the next detection creates a fresh ticket — that's a regression signal worth knowing about.
+        </div>
+      </details>
+
+      <details class="observe" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px 28px;cursor:pointer">
+        <summary style="font-family:var(--display);font-size:18px;font-weight:600;color:var(--white);list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center">
+          <span>Can I run tests on different sites without them merging?</span>
+          <span style="color:var(--cyan);font-family:var(--mono)">+</span>
+        </summary>
+        <div style="margin-top:16px;color:var(--muted);font-family:var(--mono);font-size:13px;line-height:1.7">
+          Yes. The dedup filter requires same hostname AND same pathname before any semantic comparison happens. "Broken images" on Site A and "Broken images" on Site B will produce two separate tickets. Even within a site, "Broken image on /checkout" and "Broken image on /product" stay separate.
+        </div>
+      </details>
+
+      <details class="observe" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px 28px;cursor:pointer">
+        <summary style="font-family:var(--display);font-size:18px;font-weight:600;color:var(--white);list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center">
+          <span>How does parallel testing work?</span>
+          <span style="color:var(--cyan);font-family:var(--mono)">+</span>
+        </summary>
+        <div style="margin-top:16px;color:var(--muted);font-family:var(--mono);font-size:13px;line-height:1.7">
+          Set "Max parallel tests" on a suite (1-5) or pass <code style="color:var(--cyan)">--parallel N</code> to <code style="color:var(--cyan)">skopix suite</code>. Each worker spawns its own browser instance and own LLM session. Console output is tagged <code style="color:var(--cyan)">[T1]</code>, <code style="color:var(--cyan)">[T2]</code>, etc. Recommended: 3 for most setups. Going higher requires more RAM and a paid LLM tier (free Gemini = 15 RPM limit).
+        </div>
+      </details>
+
+      <details class="observe" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px 28px;cursor:pointer">
+        <summary style="font-family:var(--display);font-size:18px;font-weight:600;color:var(--white);list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center">
+          <span>Can I run Skopix in CI/CD?</span>
+          <span style="color:var(--cyan);font-family:var(--mono)">+</span>
+        </summary>
+        <div style="margin-top:16px;color:var(--muted);font-family:var(--mono);font-size:13px;line-height:1.7">
+          Yes. Use the CLI in headless mode with <code style="color:var(--cyan)">--headless</code>. API keys and tracker creds via env vars. The exit code is 0 on pass and 1 on fail, so it integrates with any CI runner. Suite results are written to <code style="color:var(--cyan)">skopix-reports/</code> as JSON and HTML — upload as artifacts. Issues auto-pushed to GitHub/Jira/Linear during the run.
+        </div>
+      </details>
+
+      <details class="observe" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px 28px;cursor:pointer">
+        <summary style="font-family:var(--display);font-size:18px;font-weight:600;color:var(--white);list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center">
+          <span>What about negative testing?</span>
+          <span style="color:var(--cyan);font-family:var(--mono)">+</span>
+        </summary>
+        <div style="margin-top:16px;color:var(--muted);font-family:var(--mono);font-size:13px;line-height:1.7">
+          Skopix handles negative testing through clear goal phrasing. Instead of "test invalid login fails", write "attempt to log in with invalid credentials and verify the error message appears". The error appearing IS the success criterion. The agent reads goals literally — if the goal says "verify successful login" and login fails, the test correctly fails too.
+        </div>
+      </details>
+
+      <details class="observe" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px 28px;cursor:pointer">
+        <summary style="font-family:var(--display);font-size:18px;font-weight:600;color:var(--white);list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center">
+          <span>Does Skopix work with single-page apps (React, Vue, etc.)?</span>
+          <span style="color:var(--cyan);font-family:var(--mono)">+</span>
+        </summary>
+        <div style="margin-top:16px;color:var(--muted);font-family:var(--mono);font-size:13px;line-height:1.7">
+          Yes. The agent uses Playwright's adaptive waits — it waits for the DOM to settle after each action before re-evaluating. Works with React, Vue, Angular, Svelte, vanilla JS, anything that runs in a browser. The DOM extractor reads computed state, not source markup, so client-side rendering is invisible.
+        </div>
+      </details>
+
+      <details class="observe" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px 28px;cursor:pointer">
+        <summary style="font-family:var(--display);font-size:18px;font-weight:600;color:var(--white);list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center">
+          <span>What if the LLM does something unexpected?</span>
+          <span style="color:var(--cyan);font-family:var(--mono)">+</span>
+        </summary>
+        <div style="margin-top:16px;color:var(--muted);font-family:var(--mono);font-size:13px;line-height:1.7">
+          Each test has a max-step limit (default 20). The agent stops itself when it decides the goal is achieved or impossible. Auto-detect rules catch common cases (login success/failure) and break the loop early. Every step is recorded with reasoning, so even when the agent goes off-track, the report shows exactly why. Issues with the agent's behaviour can be reported back via the dashboard's thumbs-down button.
+        </div>
+      </details>
+
+      <details class="observe" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px 28px;cursor:pointer">
+        <summary style="font-family:var(--display);font-size:18px;font-weight:600;color:var(--white);list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center">
+          <span>Is my data sent to third parties?</span>
+          <span style="color:var(--cyan);font-family:var(--mono)">+</span>
+        </summary>
+        <div style="margin-top:16px;color:var(--muted);font-family:var(--mono);font-size:13px;line-height:1.7">
+          Only what you opt into. Page DOM and goals go to your chosen LLM provider (Gemini, Claude, OpenAI). Issues go to your tracker (GitHub/Jira/Linear) only if you tick the box. Skopix itself has no telemetry, no analytics, no phone-home. Reports stay on your machine. Credentials never leave your machine.
+        </div>
+      </details>
+
+      <details class="observe" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px 28px;cursor:pointer">
+        <summary style="font-family:var(--display);font-size:18px;font-weight:600;color:var(--white);list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center">
+          <span>How do I set Skopix up for a team?</span>
+          <span style="color:var(--cyan);font-family:var(--mono)">+</span>
+        </summary>
+        <div style="margin-top:16px;color:var(--muted);font-family:var(--mono);font-size:13px;line-height:1.7">
+          Run with the <code style="color:var(--cyan)">--team</code> flag, a random <code style="color:var(--cyan)">SKOPIX_SECRET_KEY</code>, and <code style="color:var(--cyan)">--host 0.0.0.0</code> so other machines can connect:<br><br>
+          <code style="color:var(--cyan);display:block;background:var(--surface2);padding:10px 14px;border-radius:6px;margin:8px 0">SKOPIX_SECRET_KEY="long-random-string" skopix dashboard --team --host 0.0.0.0</code>
+          The first person to visit <code style="color:var(--cyan)">/setup</code> becomes the admin. From there, go to the Users page in the dashboard and generate invite links for your teammates. They visit the link, set a password, they're in.
+        </div>
+      </details>
+
+      <details class="observe" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px 28px;cursor:pointer">
+        <summary style="font-family:var(--display);font-size:18px;font-weight:600;color:var(--white);list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center">
+          <span>Will my single-user setup keep working after I add team mode?</span>
+          <span style="color:var(--cyan);font-family:var(--mono)">+</span>
+        </summary>
+        <div style="margin-top:16px;color:var(--muted);font-family:var(--mono);font-size:13px;line-height:1.7">
+          Yes — team mode is fully opt-in. Run <code style="color:var(--cyan)">skopix dashboard</code> without the <code style="color:var(--cyan)">--team</code> flag and it behaves exactly as it always did: no login, no users, no database. Run it with <code style="color:var(--cyan)">--team</code> and you get the multi-user dashboard. They're completely independent code paths. Your existing tests, suites, and reports keep working in both modes.
+        </div>
+      </details>
+
+      <details class="observe" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px 28px;cursor:pointer">
+        <summary style="font-family:var(--display);font-size:18px;font-weight:600;color:var(--white);list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center">
+          <span>How do user-level tokens work alongside workspace tokens?</span>
+          <span style="color:var(--cyan);font-family:var(--mono)">+</span>
+        </summary>
+        <div style="margin-top:16px;color:var(--muted);font-family:var(--mono);font-size:13px;line-height:1.7">
+          Workspace tokens in <code style="color:var(--cyan)">.skopix.env</code> are the team-wide defaults — everyone uses them unless they've set their own. Each user can override any token from their "My settings" page in the dashboard (encrypted AES-256-GCM, stored in SQLite). When a test runs, Skopix checks the user first, falls back to workspace if not set. So Bob's GitHub issues are created as Bob (using his token) and Alice's as Alice. Same workspace, same suites, different attribution.
+        </div>
+      </details>
+
+      <details class="observe" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px 28px;cursor:pointer">
+        <summary style="font-family:var(--display);font-size:18px;font-weight:600;color:var(--white);list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center">
+          <span>What happens if I lose or change my SKOPIX_SECRET_KEY?</span>
+          <span style="color:var(--cyan);font-family:var(--mono)">+</span>
+        </summary>
+        <div style="margin-top:16px;color:var(--muted);font-family:var(--mono);font-size:13px;line-height:1.7">
+          The secret key is what encrypts users' personal tokens. If you change it, existing stored tokens can't be decrypted — Skopix will fall back to workspace defaults and users will need to re-enter their own tokens. <strong style="color:var(--text)">Treat the secret key like a database password.</strong> Store it somewhere safe (1Password, your infra's secret manager, an encrypted env file). Logins still work — only the stored tokens are affected.
+        </div>
+      </details>
+
+      <details class="observe" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px 28px;cursor:pointer">
+        <summary style="font-family:var(--display);font-size:18px;font-weight:600;color:var(--white);list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center">
+          <span>Can a viewer run tests?</span>
+          <span style="color:var(--cyan);font-family:var(--mono)">+</span>
+        </summary>
+        <div style="margin-top:16px;color:var(--muted);font-family:var(--mono);font-size:13px;line-height:1.7">
+          No. Viewers are strictly read-only — they see the dashboard, reports, and issues but can't run tests, edit suites, or push to trackers. The UI hides write controls so they don't get misleading buttons that fail. If a viewer needs to verify something, ask an admin to upgrade them to Editor. Editors can do everything except manage users.
+        </div>
+      </details>
+
+      <details class="observe" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px 28px;cursor:pointer">
+        <summary style="font-family:var(--display);font-size:18px;font-weight:600;color:var(--white);list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center">
+          <span>How do I revoke someone's access?</span>
+          <span style="color:var(--cyan);font-family:var(--mono)">+</span>
+        </summary>
+        <div style="margin-top:16px;color:var(--muted);font-family:var(--mono);font-size:13px;line-height:1.7">
+          As admin, go to the Users page in the dashboard. You can <strong style="color:var(--text)">disable</strong> an account (all their sessions immediately invalidated, can't log in, but their history is preserved) or <strong style="color:var(--text)">remove</strong> them entirely (account deleted, but their past test runs and reports remain visible to the team). The dashboard also prevents you from removing the last remaining admin so you can't lock yourself out.
+        </div>
+      </details>
+
+      <details class="observe" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px 28px;cursor:pointer">
+        <summary style="font-family:var(--display);font-size:18px;font-weight:600;color:var(--white);list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center">
+          <span>Where is my data stored, exactly?</span>
+          <span style="color:var(--cyan);font-family:var(--mono)">+</span>
+        </summary>
+        <div style="margin-top:16px;color:var(--muted);font-family:var(--mono);font-size:13px;line-height:1.7">
+          Everything is on the machine running Skopix:<br><br>
+          <strong style="color:var(--text)">User accounts &amp; sessions</strong> → <code style="color:var(--cyan)">~/.skopix/skopix.db</code> (SQLite file)<br>
+          <strong style="color:var(--text)">Encrypted user tokens</strong> → same SQLite file, encrypted with AES-256-GCM<br>
+          <strong style="color:var(--text)">Workspace credentials</strong> → <code style="color:var(--cyan)">~/.skopix/credentials.yaml</code> (chmod 0600)<br>
+          <strong style="color:var(--text)">Test reports + videos</strong> → <code style="color:var(--cyan)">./skopix-reports/</code> in your working directory<br>
+          <strong style="color:var(--text)">Suite definitions</strong> → <code style="color:var(--cyan)">*.suite.yaml</code> files in your working directory (commit to git)<br>
+          <strong style="color:var(--text)">Workspace tokens</strong> → <code style="color:var(--cyan)">.skopix.env</code> in your working directory (do NOT commit)<br><br>
+          To back up Skopix: archive the SQLite file + the reports directory + the suite YAMLs. To migrate to a new server: copy the same things.
+        </div>
+      </details>
+
+      <details class="observe" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px 28px;cursor:pointer">
+        <summary style="font-family:var(--display);font-size:18px;font-weight:600;color:var(--white);list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center">
+          <span>How do remote teammates connect when I'm on Wi-Fi at home?</span>
+          <span style="color:var(--cyan);font-family:var(--mono)">+</span>
+        </summary>
+        <div style="margin-top:16px;color:var(--muted);font-family:var(--mono);font-size:13px;line-height:1.7">
+          Three realistic options. <strong style="color:var(--text)">Same network (office Wi-Fi):</strong> they connect at <code style="color:var(--cyan)">http://your-ip:9000</code> directly. <strong style="color:var(--text)">Remote teammates:</strong> use a mesh VPN like Tailscale (free for up to 100 devices, takes 5 minutes to set up). <strong style="color:var(--text)">Always-on access:</strong> deploy to a small cloud VM (~£4/mo at Hetzner) where everyone can reach it from anywhere.
+        </div>
+      </details>
+
+      <details class="observe" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px 28px;cursor:pointer">
+        <summary style="font-family:var(--display);font-size:18px;font-weight:600;color:var(--white);list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center">
+          <span>Can I change my password?</span>
+          <span style="color:var(--cyan);font-family:var(--mono)">+</span>
+        </summary>
+        <div style="margin-top:16px;color:var(--muted);font-family:var(--mono);font-size:13px;line-height:1.7">
+          Yes — every user has a "My settings" page in the dashboard with a Change Password form. Requires entering your current password to confirm it's you. Minimum 8 characters. Your existing session stays active after a password change. If you forgot your password entirely, an admin can disable your account and re-invite you. There's no public password-reset flow because that'd require SMTP — keeping things infrastructure-free.
+        </div>
+      </details>
+
+      <details class="observe" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px 28px;cursor:pointer">
+        <summary style="font-family:var(--display);font-size:18px;font-weight:600;color:var(--white);list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center">
+          <span>How do I deploy with Docker?</span>
+          <span style="color:var(--cyan);font-family:var(--mono)">+</span>
+        </summary>
+        <div style="margin-top:16px;color:var(--muted);font-family:var(--mono);font-size:13px;line-height:1.7">
+          One command:<br><br>
+          <code style="color:var(--cyan);display:block;background:var(--surface2);padding:10px 14px;border-radius:6px;margin:8px 0;white-space:pre-wrap;font-size:11px">docker run -d --name skopix -p 9000:9000 -v ~/skopix-data:/data -e SKOPIX_SECRET_KEY="$(openssl rand -base64 32)" -e SKOPIX_TEAM_MODE=true ghcr.io/x444dyx/skopix:latest</code>
+          Multi-arch image (amd64 + arm64) on GitHub Container Registry. All persistent data lives in <code style="color:var(--cyan)">~/skopix-data</code> — back that up and you've backed up Skopix entirely. For production with auto-HTTPS, use the docker-compose + Caddy recipe in the Self-host section above, or see the full <a href="https://github.com/x444dyx/skopix/blob/main/DOCKER.md" style="color:var(--cyan)">DOCKER.md</a> guide.
+        </div>
+      </details>
+
+      <details class="observe" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px 28px;cursor:pointer">
+        <summary style="font-family:var(--display);font-size:18px;font-weight:600;color:var(--white);list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center">
+          <span>How do I update to a new version?</span>
+          <span style="color:var(--cyan);font-family:var(--mono)">+</span>
+        </summary>
+        <div style="margin-top:16px;color:var(--muted);font-family:var(--mono);font-size:13px;line-height:1.7">
+          <strong style="color:var(--text)">Docker (recommended):</strong><br>
+          <code style="color:var(--cyan);display:block;background:var(--surface2);padding:10px 14px;border-radius:6px;margin:8px 0">docker compose pull && docker compose up -d</code>
+          Pulls the latest image and recreates the container. Your data in <code style="color:var(--cyan)">./skopix-data</code> is preserved.<br><br>
+          <strong style="color:var(--text)">npm install:</strong> <code style="color:var(--cyan)">npm install -g skopix@latest</code> and restart the dashboard.<br><br>
+          To pin to a specific version, change <code style="color:var(--cyan)">:latest</code> to a version tag like <code style="color:var(--cyan)">:1.0.0</code> in your docker-compose.yml. Available tags are listed on the GitHub Container Registry page.
+        </div>
+      </details>
+
+      <details class="observe" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px 28px;cursor:pointer">
+        <summary style="font-family:var(--display);font-size:18px;font-weight:600;color:var(--white);list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center">
+          <span>Does Skopix work behind nginx/Caddy/Traefik?</span>
+          <span style="color:var(--cyan);font-family:var(--mono)">+</span>
+        </summary>
+        <div style="margin-top:16px;color:var(--muted);font-family:var(--mono);font-size:13px;line-height:1.7">
+          Yes — Skopix is a vanilla HTTP service on port 9000. It works behind any reverse proxy. We ship a Caddy recipe in the Self-host section because Caddy's auto-HTTPS is the simplest path. If you already run nginx/Traefik/Cloudflare Tunnel for other services, just point them at <code style="color:var(--cyan)">skopix:9000</code> (Docker) or <code style="color:var(--cyan)">http://your-server:9000</code> (bare metal). HTTPS termination happens at the proxy, not in Skopix.
+        </div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- DOCS -->
+<section class="docs" id="docs">
+  <div class="how-inner">
+    <div class="section-label observe">QUICK START</div>
+    <h2 class="section-title observe">Up and running<br>in under a minute.</h2>
+
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:36px;font-family:var(--mono);font-size:13px;line-height:1.9;color:var(--text);max-width:900px;margin:60px auto 0">
+      <div style="color:var(--muted2);font-size:11px;letter-spacing:0.1em;margin-bottom:14px">SETUP</div>
+      <div><span style="color:var(--cyan)">$</span> npm install -g skopix</div>
+      <div><span style="color:var(--cyan)">$</span> skopix init</div>
+      <div style="color:var(--muted);font-size:12px;margin-left:16px">→ Configure LLM provider and API keys</div>
+
+      <div style="color:var(--muted2);font-size:11px;letter-spacing:0.1em;margin:28px 0 14px">OPEN THE DASHBOARD</div>
+      <div><span style="color:var(--cyan)">$</span> skopix dashboard</div>
+      <div style="color:var(--muted);font-size:12px;margin-left:16px">→ Opens at localhost:9000 in your browser</div>
+
+      <div style="color:var(--muted2);font-size:11px;letter-spacing:0.1em;margin:28px 0 14px">OR RUN FROM CLI</div>
+      <div><span style="color:var(--cyan)">$</span> skopix run --url <span style="color:var(--purple)">https://yoursite.com</span> --goal <span style="color:var(--purple)">"log in and verify dashboard loads"</span></div>
+      <div style="color:var(--muted);font-size:12px;margin-left:16px">→ Browser opens, agent works, report saved</div>
+
+      <div style="color:var(--muted2);font-size:11px;letter-spacing:0.1em;margin:28px 0 14px">RUN A SUITE IN PARALLEL</div>
+      <div><span style="color:var(--cyan)">$</span> skopix suite my-suite.yaml --parallel <span style="color:var(--purple)">3</span></div>
+      <div style="color:var(--muted);font-size:12px;margin-left:16px">→ 3 tests at a time, finishes 3× faster</div>
+
+      <div style="color:var(--muted2);font-size:11px;letter-spacing:0.1em;margin:28px 0 14px">RUN IN TEAM MODE</div>
+      <div><span style="color:var(--cyan)">$</span> <span style="color:var(--purple)">SKOPIX_SECRET_KEY</span>=<span style="color:var(--text)">"long-random-string"</span> \</div>
+      <div style="margin-left:18px">skopix dashboard <span style="color:var(--purple)">--team --host 0.0.0.0</span></div>
+      <div style="color:var(--muted);font-size:12px;margin-left:16px">→ Visit /setup to create the first admin, then invite teammates</div>
+    </div>
+  </div>
+</section>
+<!-- CTA -->
+<section class="cta-section">
+  <div class="cta-inner observe">
+    <div class="cta-title">Solo or<br>as a team.</div>
+    <div class="cta-sub">One command for personal use. Add <code style="color:var(--cyan);font-family:var(--mono);background:var(--cyan-dim);padding:2px 8px;border-radius:4px">--team</code> for your QA team.<br>Self-hosted. Free. Yours forever.</div>
+    <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;">
+      <a href="./app/index.html" class="btn-primary">Open dashboard →</a>
+      <a href="#self-host" class="btn-ghost">Self-hosting guide</a>
+      <a href="https://github.com/ayteelabs/skopix" class="btn-ghost">View on GitHub</a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-brand">SKOPIX</div>
+  <ul class="footer-links">
+    <li><a href="#how">How it works</a></li>
+    <li><a href="#docs">Docs</a></li>
+    <li><a href="https://github.com/ayteelabs/skopix">GitHub</a></li>
+    <li><a href="https://ayteelabs.com">Aytee Labs</a></li>
+  </ul>
+  <div class="footer-copy">© 2025 Aytee Labs. Built by Adil.</div>
+</footer>
+
+<script>
+// Cursor
+const cursor = document.getElementById('cursor');
+const ring = document.getElementById('cursorRing');
+let mx = 0, my = 0, rx = 0, ry = 0;
+
+document.addEventListener('mousemove', e => {
+  mx = e.clientX; my = e.clientY;
+  cursor.style.left = mx - 4 + 'px';
+  cursor.style.top = my - 4 + 'px';
+});
+
+function animRing() {
+  rx += (mx - rx - 16) * 0.15;
+  ry += (my - ry - 16) * 0.15;
+  ring.style.left = rx + 'px';
+  ring.style.top = ry + 'px';
+  requestAnimationFrame(animRing);
+}
+animRing();
+
+document.querySelectorAll('a, button, .step-item, .feature-card, .provider-card, .docs-nav-item').forEach(el => {
+  el.addEventListener('mouseenter', () => { cursor.classList.add('hover'); ring.classList.add('hover'); });
+  el.addEventListener('mouseleave', () => { cursor.classList.remove('hover'); ring.classList.remove('hover'); });
+});
+
+// Nav scroll
+window.addEventListener('scroll', () => {
+  document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 60);
+});
+
+// Intersection observer
+const obs = new IntersectionObserver((entries) => {
+  entries.forEach((e, i) => {
+    if (e.isIntersecting) {
+      setTimeout(() => e.target.classList.add('visible'), i * 80);
+    }
+  });
+}, { threshold: 0.1 });
+
+document.querySelectorAll('.stat-item, .observe, .step-item, .feature-card, .provider-card').forEach(el => obs.observe(el));
+
+// Docs navigation
+function showDoc(id, el) {
+  document.querySelectorAll('.docs-section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.docs-nav-item').forEach(a => a.classList.remove('active'));
+  const section = document.getElementById('doc-' + id);
+  if (section) section.classList.add('active');
+  if (el) el.classList.add('active');
+}
+</script>
+</body>
+</html>

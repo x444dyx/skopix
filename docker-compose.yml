@@ -1,0 +1,48 @@
+# ===== Skopix docker-compose.yml =====
+# Quick-start deployment. Run with:
+#
+#   docker compose up -d
+#
+# Then visit http://your-server-ip:9000 (or /setup if first time in team mode).
+#
+# For production (HTTPS, custom domain), see docker-compose.production.yml
+# which adds Caddy as a reverse proxy with automatic Let's Encrypt certificates.
+
+services:
+  skopix:
+    image: skopix:local
+    container_name: skopix
+    restart: unless-stopped
+    ports:
+      # Maps container port 9000 to host port 9000.
+      # Change the left side if 9000 is taken on your host (e.g. "8080:9000").
+      - "9000:9000"
+    volumes:
+      # All Skopix data persists in ./skopix-data on the host. Back this up
+      # to back up Skopix entirely. Includes: SQLite DB (users + sessions +
+      # encrypted tokens + audit log), test reports + videos, suite YAMLs,
+      # credentials vault, workspace .skopix.env.
+      - ./skopix-data:/data
+    environment:
+      # Required when SKOPIX_TEAM_MODE=true. At least 16 characters.
+      # Generate with: openssl rand -base64 32
+      # KEEP THIS SECRET - it encrypts users' personal API tokens.
+      # If you ever lose or change it, existing per-user tokens become
+      # unreadable and users will need to re-enter them.
+      SKOPIX_SECRET_KEY: ${SKOPIX_SECRET_KEY}
+
+      # Set to "true" to enable multi-user mode (login + invites + roles).
+      # Leave unset or set to "false" for single-user (no auth, just runs).
+      SKOPIX_TEAM_MODE: "true"
+
+      # Optional: workspace-wide token defaults. Users can override their own
+      # in My Settings inside the dashboard. If not set, integrations that
+      # require these will only work for users who set personal tokens.
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      # CLAUDE_API_KEY: ${CLAUDE_API_KEY}
+      # OPENAI_API_KEY: ${OPENAI_API_KEY}
+      GITHUB_TOKEN: ${GITHUB_TOKEN}
+      GITHUB_REPO: ${GITHUB_REPO}
+      # JIRA_BASE_URL: ${JIRA_BASE_URL}
+      # JIRA_PROJECT_KEY: ${JIRA_PROJECT_KEY}
+      # LINEAR_API_KEY: ${LINEAR_API_KEY}

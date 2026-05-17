@@ -1,0 +1,41 @@
+# ===== Skopix Caddyfile =====
+# Reverse proxy with automatic Let's Encrypt HTTPS.
+#
+# Replace skopix.yourcompany.com with your actual domain.
+# Caddy will automatically fetch and renew a TLS certificate for that domain
+# when it first starts up - no manual cert handling needed.
+#
+# Requirements before this works:
+#   1. Your domain's A record must point at this server's public IP
+#   2. Ports 80 and 443 must be reachable from the internet (Let's Encrypt
+#      uses HTTP-01 challenge over port 80 to verify domain ownership)
+
+skopix.yourcompany.com {
+    # Forward all requests to the Skopix container on port 9000 (internal Docker network)
+    reverse_proxy skopix:9000
+
+    # Optional: useful security headers
+    header {
+        # Don't reveal that this is a Caddy install
+        -Server
+        # HSTS: tell browsers to always use HTTPS for this domain
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        # Prevent embedding in iframes from other sites (clickjacking)
+        X-Frame-Options "SAMEORIGIN"
+        # Prevent MIME-sniffing
+        X-Content-Type-Options "nosniff"
+        # Referrer policy
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    # Optional: log requests (Docker captures stdout)
+    log {
+        output stdout
+        format console
+    }
+}
+
+# Want HTTP-only for a quick test? Comment out the block above and uncomment this:
+# :80 {
+#     reverse_proxy skopix:9000
+# }
