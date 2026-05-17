@@ -1,0 +1,78 @@
+name: Build and publish Docker image
+
+# When this runs:
+# - On every push to main (publishes 'latest' tag)
+# - On every version tag like v1.2.3 (publishes versioned tags)
+# - Can be triggered manually from the Actions UI
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write  # needed to push to GitHub Container Registry
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      # Set up QEMU so we can cross-compile for ARM64 from a regular x86 GitHub runner.
+      # This is what makes `--platform linux/arm64` work without needing an ARM runner.
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      # Buildx is Docker's multi-platform build engine. Without it we can only
+      # build for the runner's architecture.
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Generate tags + labels automatically based on the trigger.
+      # - push to main -> latest
+      # - push tag v1.2.3 -> 1.2.3, 1.2, 1, latest
+      # - manual run -> sha of commit
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          # The two architectures most users care about:
+          #  - linux/amd64: x86_64 (most cloud VMs, Intel/AMD Macs, Linux desktops)
+          #  - linux/arm64: ARM64 (Apple Silicon Macs, Raspberry Pi 4/5, AWS Graviton, Hetzner Ampere)
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Cache layers between runs via GitHub Actions cache - speeds up rebuilds significantly
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
