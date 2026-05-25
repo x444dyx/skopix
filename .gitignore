@@ -1,9 +1,0 @@
-node_modules/
-.skopix.env
-credentials.yaml
-skopix-reports/
-*.webm
-*.mp4
-.DS_Store
-.env
-skopix-data/

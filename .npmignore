@@ -1,0 +1,28 @@
+# Test data & reports — never publish these
+skopix-reports/
+skopix-data/
+*.suite.yaml
+_saved.suite.yaml
+create-chart-flow.suite.yaml
+credentials.yaml
+
+# Docker
+Dockerfile
+docker-compose.yml
+docker-compose.production.yml
+docker-entrypoint.sh
+DOCKER.md
+Caddyfile
+
+# Dev & local
+.env
+.skopix.env
+*.env
+node_modules/
+.DS_Store
+*.log
+npm-debug.log*
+
+# Git
+.git/
+.gitignore
