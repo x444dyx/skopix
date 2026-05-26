@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Skopix — Record. Replay. Ship with confidence.</title>
+<meta name="description" content="Skopix is a browser-based QA tool that records your test flows and replays them deterministically. AI stabilises selectors, generates Playwright code, and catches regressions before your users do.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #080810;
+  --surface: #0d0d1a;
+  --surface2: #12121f;
+  --border: rgba(255,255,255,0.06);
+  --border-bright: rgba(0,212,255,0.2);
+  --cyan: #00d4ff;
+  --cyan-dim: rgba(0,212,255,0.12);
+  --cyan-mid: rgba(0,212,255,0.4);
+  --purple: #7c3aed;
+  --purple-dim: rgba(124,58,237,0.12);
+  --amber: #f59e0b;
+  --green: #22c55e;
+  --red: #ef4444;
+  --text: #e8eaf0;
+  --muted: #5a6180;
+  --muted2: #3a3f5c;
+  --white: #ffffff;
+  --mono: 'DM Mono', monospace;
+  --display: 'Syne', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; overflow-x: hidden; }
+body { background: var(--bg); color: var(--text); font-family: var(--display); overflow-x: hidden; cursor: none; }
+
+.cursor { position: fixed; width: 8px; height: 8px; background: var(--cyan); border-radius: 50%; pointer-events: none; z-index: 9999; transition: transform 0.1s ease; mix-blend-mode: screen; }
+.cursor-ring { position: fixed; width: 32px; height: 32px; border: 1px solid var(--cyan-mid); border-radius: 50%; pointer-events: none; z-index: 9998; transition: transform 0.15s ease, width 0.2s ease, height 0.2s ease, opacity 0.2s ease; }
+.cursor.hover { transform: scale(3); }
+.cursor-ring.hover { width: 50px; height: 50px; opacity: 0.5; }
+
+body::before { content: ''; position: fixed; inset: 0; background-image: linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px); background-size: 60px 60px; pointer-events: none; z-index: 0; }
+
+nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; padding: 20px 48px; display: flex; align-items: center; justify-content: space-between; background: linear-gradient(to bottom, rgba(8,8,16,0.95), transparent); backdrop-filter: blur(12px); border-bottom: 1px solid transparent; transition: border-color 0.3s ease; }
+nav.scrolled { border-bottom-color: var(--border); }
+.nav-logo { font-family: var(--mono); font-size: 18px; font-weight: 500; color: var(--cyan); letter-spacing: 0.15em; text-decoration: none; }
+.nav-logo span { color: var(--muted); }
+.nav-links { display: flex; align-items: center; gap: 36px; list-style: none; }
+.nav-links a { font-family: var(--mono); font-size: 12px; color: var(--muted); text-decoration: none; letter-spacing: 0.08em; transition: color 0.2s; }
+.nav-links a:hover { color: var(--white); }
+.nav-cta { font-family: var(--mono); font-size: 12px; color: var(--cyan) !important; border: 1px solid var(--border-bright); padding: 8px 18px; border-radius: 4px; transition: background 0.2s !important; }
+.nav-cta:hover { background: var(--cyan-dim) !important; }
+
+section { position: relative; z-index: 1; }
+
+/* Hero */
+.hero { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 140px 48px; position: relative; overflow: hidden; }
+.hero-glow { position: absolute; width: 700px; height: 700px; background: radial-gradient(circle, rgba(0,212,255,0.07) 0%, transparent 70%); top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; animation: pulse-glow 4s ease-in-out infinite; }
+.hero-glow2 { position: absolute; width: 400px; height: 400px; background: radial-gradient(circle, rgba(124,58,237,0.06) 0%, transparent 70%); top: 40%; left: 30%; transform: translate(-50%, -50%); pointer-events: none; animation: pulse-glow 6s ease-in-out infinite reverse; }
+@keyframes pulse-glow { 0%, 100% { opacity: 0.6; transform: translate(-50%, -50%) scale(1); } 50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); } }
+
+.badge { display: inline-flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; color: var(--cyan); border: 1px solid var(--border-bright); padding: 6px 14px; border-radius: 100px; background: var(--cyan-dim); margin-bottom: 32px; }
+.badge-dot { width: 6px; height: 6px; background: var(--cyan); border-radius: 50%; animation: pulse-glow 2s ease-in-out infinite; }
+
+.hero-title { font-family: var(--display); font-size: clamp(48px, 7vw, 96px); font-weight: 800; line-height: 1.0; color: var(--white); max-width: 900px; margin-bottom: 28px; letter-spacing: -0.02em; }
+.hero-title .accent { color: var(--cyan); }
+.hero-title .dim { color: var(--muted); }
+
+.hero-sub { font-family: var(--mono); font-size: 16px; line-height: 1.8; color: var(--muted); max-width: 560px; margin-bottom: 48px; }
+
+.hero-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-bottom: 80px; }
+.btn-primary { font-family: var(--mono); font-size: 13px; background: var(--cyan); color: #000; padding: 14px 28px; border-radius: 6px; text-decoration: none; font-weight: 500; transition: opacity 0.2s, transform 0.2s; letter-spacing: 0.05em; }
+.btn-primary:hover { opacity: 0.85; transform: translateY(-1px); }
+.btn-ghost { font-family: var(--mono); font-size: 13px; background: transparent; color: var(--text); padding: 14px 28px; border-radius: 6px; text-decoration: none; border: 1px solid var(--border); transition: border-color 0.2s, background 0.2s; letter-spacing: 0.05em; }
+.btn-ghost:hover { border-color: var(--cyan-mid); background: var(--cyan-dim); }
+
+.hero-terminal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 0; max-width: 700px; width: 100%; overflow: hidden; text-align: left; }
+.terminal-bar { background: var(--surface2); padding: 12px 16px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--border); }
+.terminal-dot { width: 12px; height: 12px; border-radius: 50%; }
+.terminal-body { padding: 24px 28px; font-family: var(--mono); font-size: 13px; line-height: 2; }
+.t-cmd { color: var(--cyan); }
+.t-out { color: var(--muted); font-size: 12px; padding-left: 16px; }
+.t-pass { color: var(--green); }
+.t-warn { color: var(--amber); }
+.t-step { color: var(--text); }
+
+/* Observe animation */
+.observe, .step-item, .feature-card, .provider-card, .stat-item { opacity: 0; transform: translateY(24px); transition: opacity 0.6s ease, transform 0.6s ease; }
+.observe.visible, .step-item.visible, .feature-card.visible, .provider-card.visible, .stat-item.visible { opacity: 1; transform: translateY(0); }
+
+/* Section shared */
+.section-inner { max-width: 1100px; margin: 0 auto; padding: 120px 48px; }
+.section-label { font-family: var(--mono); font-size: 11px; letter-spacing: 0.2em; color: var(--cyan); text-transform: uppercase; margin-bottom: 20px; }
+.section-title { font-family: var(--display); font-size: clamp(36px, 5vw, 60px); font-weight: 800; color: var(--white); line-height: 1.1; letter-spacing: -0.02em; margin-bottom: 20px; }
+.section-sub { font-family: var(--mono); font-size: 14px; color: var(--muted); line-height: 1.8; max-width: 560px; }
+
+/* How it works */
+.how-bg { background: linear-gradient(to bottom, transparent, var(--surface) 20%, var(--surface) 80%, transparent); }
+.how-inner { max-width: 1100px; margin: 0 auto; padding: 120px 48px; }
+.steps-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2px; margin-top: 64px; background: var(--border); border-radius: 14px; overflow: hidden; }
+.step-item { background: var(--surface); padding: 40px 36px; }
+.step-num { font-family: var(--mono); font-size: 11px; color: var(--cyan); letter-spacing: 0.15em; margin-bottom: 20px; }
+.step-icon { font-size: 32px; margin-bottom: 16px; }
+.step-title { font-family: var(--display); font-size: 22px; font-weight: 700; color: var(--white); margin-bottom: 12px; }
+.step-desc { font-family: var(--mono); font-size: 13px; color: var(--muted); line-height: 1.7; }
+.step-tag { display: inline-block; font-family: var(--mono); font-size: 10px; color: var(--amber); border: 1px solid rgba(245,158,11,0.3); padding: 3px 8px; border-radius: 4px; margin-top: 12px; background: rgba(245,158,11,0.08); }
+
+/* Features */
+.features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-top: 64px; }
+.feature-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 32px; transition: border-color 0.2s, transform 0.2s; }
+.feature-card:hover { border-color: var(--border-bright); transform: translateY(-2px); }
+.feature-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 20px; }
+.feature-title { font-family: var(--display); font-size: 18px; font-weight: 700; color: var(--white); margin-bottom: 10px; }
+.feature-desc { font-family: var(--mono); font-size: 12px; color: var(--muted); line-height: 1.7; }
+
+/* AI section */
+.ai-section { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.provider-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-top: 48px; }
+.provider-card { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 28px; transition: border-color 0.2s; }
+.provider-card:hover { border-color: var(--border-bright); }
+.provider-name { font-family: var(--mono); font-size: 14px; font-weight: 500; color: var(--white); margin-bottom: 8px; }
+.provider-model { font-family: var(--mono); font-size: 11px; color: var(--cyan); margin-bottom: 12px; }
+.provider-desc { font-family: var(--mono); font-size: 12px; color: var(--muted); line-height: 1.6; }
+.provider-local { border-color: rgba(245,158,11,0.3); }
+.provider-local .provider-name { color: var(--amber); }
+
+/* Modes */
+.modes-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 64px; }
+@media(max-width:700px) { .modes-grid { grid-template-columns: 1fr; } }
+.mode-card { border-radius: 14px; padding: 40px; border: 1px solid var(--border); }
+.mode-solo { background: linear-gradient(135deg, var(--surface) 0%, var(--surface2) 100%); }
+.mode-team { background: linear-gradient(135deg, rgba(124,58,237,0.08) 0%, var(--surface) 100%); border-color: rgba(124,58,237,0.2); }
+.mode-label { font-family: var(--mono); font-size: 11px; letter-spacing: 0.15em; margin-bottom: 16px; }
+.mode-title { font-family: var(--display); font-size: 28px; font-weight: 800; color: var(--white); margin-bottom: 14px; }
+.mode-desc { font-family: var(--mono); font-size: 13px; color: var(--muted); line-height: 1.7; margin-bottom: 24px; }
+.mode-code { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 18px 20px; font-family: var(--mono); font-size: 12px; line-height: 1.9; }
+
+/* Assertions */
+.assert-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 48px; }
+.assert-pill { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; font-family: var(--mono); font-size: 12px; }
+.assert-type { color: var(--cyan); font-size: 11px; letter-spacing: 0.08em; margin-bottom: 6px; }
+.assert-example { color: var(--muted); font-size: 11px; }
+
+/* Install */
+.install-section { background: linear-gradient(to bottom, transparent, var(--surface) 30%, var(--surface) 70%, transparent); }
+.install-inner { max-width: 900px; margin: 0 auto; padding: 120px 48px; }
+.code-block { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 24px 28px; font-family: var(--mono); font-size: 13px; line-height: 2; margin: 24px 0; position: relative; }
+.code-label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.15em; color: var(--muted2); text-transform: uppercase; margin-bottom: 8px; }
+.code-comment { color: var(--muted); }
+.code-cmd { color: var(--cyan); }
+.code-val { color: #a78bfa; }
+.code-out { color: var(--muted); font-size: 11px; padding-left: 16px; }
+
+/* FAQ */
+.faq-list { display: grid; gap: 12px; margin-top: 64px; }
+details { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px 28px; }
+details[open] { border-color: var(--border-bright); }
+summary { font-family: var(--display); font-size: 18px; font-weight: 600; color: var(--white); list-style: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+summary::-webkit-details-marker { display: none; }
+.faq-icon { color: var(--cyan); font-family: var(--mono); transition: transform 0.2s; }
+details[open] .faq-icon { transform: rotate(45deg); }
+.faq-body { margin-top: 16px; color: var(--muted); font-family: var(--mono); font-size: 13px; line-height: 1.8; }
+.faq-body code { color: var(--cyan); background: var(--cyan-dim); padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+.faq-body strong { color: var(--text); }
+
+/* CTA */
+.cta-section { padding: 140px 48px; text-align: center; }
+.cta-title { font-family: var(--display); font-size: clamp(48px, 7vw, 80px); font-weight: 800; color: var(--white); line-height: 1.05; letter-spacing: -0.02em; margin-bottom: 24px; }
+.cta-sub { font-family: var(--mono); font-size: 15px; color: var(--muted); line-height: 1.8; max-width: 500px; margin: 0 auto 48px; }
+
+/* Footer */
+footer { border-top: 1px solid var(--border); padding: 48px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 24px; }
+.footer-brand { font-family: var(--mono); font-size: 16px; font-weight: 500; color: var(--cyan); letter-spacing: 0.2em; }
+.footer-links { display: flex; gap: 28px; list-style: none; }
+.footer-links a { font-family: var(--mono); font-size: 12px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+.footer-links a:hover { color: var(--white); }
+.footer-copy { font-family: var(--mono); font-size: 11px; color: var(--muted2); }
+
+@media(max-width:768px) {
+  nav { padding: 16px 24px; }
+  .nav-links { display: none; }
+  .hero { padding: 120px 24px 80px; }
+  .section-inner, .how-inner, .install-inner { padding: 80px 24px; }
+  .steps-grid { grid-template-columns: 1fr; }
+  footer { flex-direction: column; align-items: flex-start; padding: 32px 24px; }
+}
+</style>
+</head>
+<body>
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- NAV -->
+<nav id="nav">
+  <a href="#" class="nav-logo">SKOP<span>IX</span></a>
+  <ul class="nav-links">
+    <li><a href="#how">How it works</a></li>
+    <li><a href="#ai">AI providers</a></li>
+    <li><a href="#modes">Solo & team</a></li>
+    <li><a href="#install">Install</a></li>
+    <li><a href="#faq">FAQ</a></li>
+    <li><a href="https://github.com/x444dyx/skopix" class="nav-cta">GitHub →</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-glow2"></div>
+
+  <div class="badge"><span class="badge-dot"></span>Record · Replay · Regression-proof</div>
+
+  <h1 class="hero-title">
+    QA that works<br>
+    <span class="accent">like you do.</span>
+  </h1>
+
+  <p class="hero-sub">
+    Use your app normally. Skopix records every action. AI stabilises the selectors, writes the Playwright code, and replays it all — deterministically — every time.
+  </p>
+
+  <div class="hero-actions">
+    <a href="#install" class="btn-primary">Get started free →</a>
+    <a href="#how" class="btn-ghost">See how it works</a>
+    <a href="https://github.com/x444dyx/skopix" class="btn-ghost">View on GitHub</a>
+  </div>
+
+  <div class="hero-terminal observe">
+    <div class="terminal-bar">
+      <div class="terminal-dot" style="background:#ff5f57"></div>
+      <div class="terminal-dot" style="background:#febc2e"></div>
+      <div class="terminal-dot" style="background:#28c840"></div>
+      <span style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:8px">skopix dashboard</span>
+    </div>
+    <div class="terminal-body">
+      <div><span class="t-cmd">$</span> SKOPIX_SECRET_KEY="..." skopix dashboard --team</div>
+      <div class="t-out">✔ Dashboard running at http://localhost:9000</div>
+      <div class="t-out">✔ Team mode active · 3 users online</div>
+      <div style="margin-top:12px;color:var(--muted2)">── Replaying: Create A Bar Chart ──────────────────</div>
+      <div><span class="t-pass">✓</span> <span class="t-step">[1/14] CLICK — Click username input field</span></div>
+      <div><span class="t-pass">✓</span> <span class="t-step">[2/14] TYPE — Type 'admin' into username field</span></div>
+      <div><span class="t-pass">✓</span> <span class="t-step">[5/14] CLICK — Click the plus icon to add chart</span></div>
+      <div><span class="t-pass">✓</span> <span class="t-step">[13/14] ASSERT — Chart is visible</span></div>
+      <div><span class="t-pass">✓</span> <span class="t-step">[14/14] ASSERT — Title attribute contains "Bar chart"</span></div>
+      <div style="margin-top:8px"><span class="t-pass">✔ PASSED</span> <span style="color:var(--muted)">· 14 steps · 9.4s</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how-bg" id="how">
+  <div class="how-inner">
+    <div class="section-label observe">How it works</div>
+    <h2 class="section-title observe">Record once.<br>Replay forever.</h2>
+    <p class="section-sub observe">No scripting. No selectors. Just use your app — Skopix captures everything and turns it into a stable, repeatable test.</p>
+
+    <div class="steps-grid">
+      <div class="step-item observe">
+        <div class="step-num">01 — RECORD</div>
+        <div class="step-icon">⏺</div>
+        <div class="step-title">Use your app normally</div>
+        <div class="step-desc">Click Record in the dashboard. A real Chrome window opens. Use your app exactly as a user would — click, type, navigate, scroll. Every action is captured in real time. Add assertions by clicking "+ Assert" in the floating toolbar — pick any element, choose what to check (text, visibility, count, attribute), done.</div>
+        <span class="step-tag">No code required</span>
+      </div>
+
+      <div class="step-item observe">
+        <div class="step-num">02 — AI PROCESSING</div>
+        <div class="step-icon">◆</div>
+        <div class="step-title">AI stabilises your steps</div>
+        <div class="step-desc">After you stop, Skopix sends your raw steps through an LLM. It rewrites fragile positional selectors into stable ones (data-testid, aria-label, semantic HTML). It generates human-readable descriptions for each step. It produces complete Playwright test code in both JavaScript and TypeScript — ready to drop into your CI pipeline.</div>
+        <span class="step-tag">Gemini · OpenAI · Ollama</span>
+      </div>
+
+      <div class="step-item observe">
+        <div class="step-num">03 — REPLAY</div>
+        <div class="step-icon">▶</div>
+        <div class="step-title">Run it whenever you want</div>
+        <div class="step-desc">Click replay from All Tests, run a suite in parallel, or trigger from CI. Skopix replays every step deterministically in a headed browser. Smart click disambiguation matches elements by their recorded coordinates when multiple match. Failed steps stop the test and tell you exactly which step and why.</div>
+        <span class="step-tag">Deterministic · No flakiness</span>
+      </div>
+
+      <div class="step-item observe">
+        <div class="step-num">04 — DEBUG</div>
+        <div class="step-icon">⏸</div>
+        <div class="step-title">Fix tests at any step</div>
+        <div class="step-desc">Click the ⏺ button on any step to set a debug point. Skopix replays up to that step automatically — navigating, logging in, filling forms — then hands control back to you in the browser. Record new steps from exactly that state. New steps get AI-processed and inserted back into your test.</div>
+        <span class="step-tag">No re-recording from scratch</span>
+      </div>
+
+      <div class="step-item observe">
+        <div class="step-num">05 — REUSE</div>
+        <div class="step-icon">♻</div>
+        <div class="step-title">Share setup flows</div>
+        <div class="step-desc">Mark any test as Reusable. Other tests can reference it as their Setup — Skopix runs the setup steps first in the same browser session, then hands off to the main test. Record your login flow once. Every other test that needs authentication just references it. No duplication, no maintenance headache.</div>
+        <span class="step-tag">Setup · Teardown · Reuse</span>
+      </div>
+
+      <div class="step-item observe">
+        <div class="step-num">06 — REPORT</div>
+        <div class="step-icon">📋</div>
+        <div class="step-title">Full session reports</div>
+        <div class="step-desc">Every replay generates a full report: two-column layout with video on the left, clickable step list on the right. Click any step to see the screenshot at that point. Sessions are stored in All Sessions. Suite runs aggregate results across all tests. Audit log tracks who ran what and when.</div>
+        <span class="step-tag">Video · Screenshots · HTML report</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ASSERTIONS -->
+<section>
+  <div class="section-inner">
+    <div class="section-label observe">Assertions</div>
+    <h2 class="section-title observe">Assert anything.<br>Without writing code.</h2>
+    <p class="section-sub observe">During recording, click "+ Assert" in the toolbar, pick any element on the page, and choose what to verify. Smart auto-suggestion picks the most appropriate type based on the element.</p>
+
+    <div class="assert-grid">
+      <div class="assert-pill observe">
+        <div class="assert-type">VISIBLE</div>
+        <div class="assert-example">Element is present and visible on screen</div>
+      </div>
+      <div class="assert-pill observe">
+        <div class="assert-type">TEXT CONTAINS</div>
+        <div class="assert-example">Element's text content includes a substring</div>
+      </div>
+      <div class="assert-pill observe">
+        <div class="assert-type">TEXT EQUALS</div>
+        <div class="assert-example">Element's text matches exactly</div>
+      </div>
+      <div class="assert-pill observe">
+        <div class="assert-type">URL CONTAINS</div>
+        <div class="assert-example">Current page URL includes a path or query string</div>
+      </div>
+      <div class="assert-pill observe">
+        <div class="assert-type">ELEMENT COUNT</div>
+        <div class="assert-example">Exactly N elements match the selector</div>
+      </div>
+      <div class="assert-pill observe">
+        <div class="assert-type">ATTRIBUTE CONTAINS</div>
+        <div class="assert-example">title, alt, aria-label, data-* attribute includes value</div>
+      </div>
+    </div>
+
+    <div style="margin-top:48px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:32px;font-family:var(--mono);font-size:12px;line-height:1.8;max-width:700px" class="observe">
+      <div style="color:var(--muted2);font-size:10px;letter-spacing:0.15em;margin-bottom:16px">GENERATED PLAYWRIGHT CODE</div>
+      <div><span style="color:var(--purple)">// Assert chart renders</span></div>
+      <div><span style="color:var(--cyan)">await</span> expect(page.locator(<span style="color:#a78bfa">'.highcharts-container'</span>)).toBeVisible();</div>
+      <div style="margin-top:8px"><span style="color:var(--purple)">// Assert top value is correct</span></div>
+      <div><span style="color:var(--cyan)">await</span> expect(page.locator(<span style="color:#a78bfa">"span:has-text('60.00')"</span>)).toContainText(<span style="color:#a78bfa">'60.00'</span>);</div>
+      <div style="margin-top:8px"><span style="color:var(--purple)">// Assert tooltip explains SVG behaviour</span></div>
+      <div><span style="color:var(--cyan)">await</span> expect(page.locator(<span style="color:#a78bfa">'i.fa-question'</span>)).toHaveAttribute(<span style="color:#a78bfa">'title'</span>, <span style="color:#a78bfa">/SVG equivalent/</span>);</div>
+    </div>
+  </div>
+</section>
+
+<!-- AI PROVIDERS -->
+<section class="ai-section" id="ai">
+  <div class="section-inner">
+    <div class="section-label observe">AI providers</div>
+    <h2 class="section-title observe">Bring your own AI.<br>Or run it locally.</h2>
+    <p class="section-sub observe">Skopix uses AI at one point only — processing your raw recording into stable selectors and Playwright code. Replay is fully deterministic, no LLM involved. Choose whatever fits your setup.</p>
+
+    <div class="provider-grid">
+      <div class="provider-card observe">
+        <div class="provider-name">Google Gemini</div>
+        <div class="provider-model">gemini-2.5-flash (default)</div>
+        <div class="provider-desc">Fast, affordable, excellent at code generation. The recommended default. Free tier available via Google AI Studio. Set <code style="color:var(--cyan)">GEMINI_API_KEY</code> in config.</div>
+      </div>
+      <div class="provider-card observe">
+        <div class="provider-name">OpenAI</div>
+        <div class="provider-model">gpt-4o-mini · gpt-4o</div>
+        <div class="provider-desc">Reliable choice if you already have OpenAI credits. gpt-4o-mini is the cost-effective option. Set <code style="color:var(--cyan)">OPENAI_API_KEY</code> in config.</div>
+      </div>
+      <div class="provider-card provider-local observe">
+        <div class="provider-name">🖥 Ollama (local)</div>
+        <div class="provider-model">llama3.1 · qwen2.5-coder · any model</div>
+        <div class="provider-desc">Run AI completely on your machine. No API key, no cost, no data leaving your network. Ideal for air-gapped environments or privacy-sensitive codebases. Requires <a href="https://ollama.ai" style="color:var(--amber)">Ollama</a> running locally.</div>
+      </div>
+    </div>
+
+    <div style="margin-top:48px;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:32px;max-width:860px" class="observe">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--muted2);letter-spacing:0.15em;margin-bottom:24px">CONFIGURE VIA skopix init OR .skopix.env</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;font-family:var(--mono);font-size:12px;line-height:1.9">
+        <div>
+          <div style="color:var(--muted);margin-bottom:8px"># Gemini (default)</div>
+          <div style="color:var(--cyan)">SKOPIX_PROVIDER=gemini</div>
+          <div style="color:var(--text)">GEMINI_API_KEY=AIza...</div>
+        </div>
+        <div>
+          <div style="color:var(--muted);margin-bottom:8px"># OpenAI</div>
+          <div style="color:var(--cyan)">SKOPIX_PROVIDER=openai</div>
+          <div style="color:var(--text)">OPENAI_API_KEY=sk-...</div>
+        </div>
+        <div>
+          <div style="color:var(--muted);margin-bottom:8px"># Ollama (local)</div>
+          <div style="color:var(--cyan)">SKOPIX_PROVIDER=ollama</div>
+          <div style="color:var(--text)">OLLAMA_MODEL=llama3.1</div>
+          <div style="color:var(--muted);font-size:11px">OLLAMA_BASE_URL=http://localhost:11434</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:24px;font-family:var(--mono);font-size:12px;color:var(--muted);max-width:700px;line-height:1.7" class="observe">
+      <strong style="color:var(--amber)">💡 Privacy note:</strong> AI is only called when you finish a recording. Your test steps (selectors, values, URLs) are sent to the LLM to generate stable selectors and Playwright code. During replay, zero AI calls are made — it's pure deterministic browser automation. If you use Ollama, nothing ever leaves your machine.
+    </div>
+  </div>
+</section>
+
+<!-- SOLO & TEAM MODES -->
+<section id="modes">
+  <div class="section-inner">
+    <div class="section-label observe">Deployment modes</div>
+    <h2 class="section-title observe">Solo or as a team.<br>Same install.</h2>
+    <p class="section-sub observe">One flag changes everything. Run locally for personal use, or flip to team mode and share with your entire QA team — no separate server software needed.</p>
+
+    <div class="modes-grid">
+      <div class="mode-card mode-solo observe">
+        <div class="mode-label" style="color:var(--cyan)">⬡ SOLO MODE</div>
+        <div class="mode-title">Just you</div>
+        <div class="mode-desc">Run the dashboard on your machine. Open at localhost:9000. No authentication, no accounts. Perfect for personal projects, freelance work, or trying Skopix out.</div>
+        <div class="mode-code">
+          <div style="color:var(--muted)">$ npm install -g skopix</div>
+          <div style="color:var(--muted)">$ skopix init</div>
+          <div style="color:var(--cyan)">$ skopix dashboard</div>
+          <div style="color:var(--muted);font-size:11px;margin-top:8px">→ Open http://localhost:9000</div>
+        </div>
+      </div>
+
+      <div class="mode-card mode-team observe">
+        <div class="mode-label" style="color:var(--purple)">⬡ TEAM MODE</div>
+        <div class="mode-title">You and your team</div>
+        <div class="mode-desc">Adds login, user accounts, roles (Admin/Tester/Viewer), audit log, and shared test libraries. Teammates connect via your IP or a tunnel like <a href="https://portix.ayteelabs.com" style="color:var(--cyan)">Portix</a>. All test data lives on the host machine.</div>
+        <div class="mode-code">
+          <div><span style="color:var(--purple)">SKOPIX_SECRET_KEY</span>=<span style="color:var(--text)">"long-random-string"</span> \</div>
+          <div style="padding-left:16px"><span style="color:var(--cyan)">skopix dashboard --team --host 0.0.0.0</span></div>
+          <div style="color:var(--muted);font-size:11px;margin-top:8px">→ Visit /setup to create the first admin</div>
+          <div style="color:var(--muted);font-size:11px">→ Invite teammates from the Users tab</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:32px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:32px;" class="observe">
+      <div style="font-family:var(--mono);font-size:11px;color:var(--muted2);letter-spacing:0.15em;margin-bottom:20px">SHARING WITH REMOTE TEAMMATES</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:24px;font-family:var(--mono);font-size:12px;line-height:1.7">
+        <div>
+          <div style="color:var(--cyan);margin-bottom:6px">Same office</div>
+          <div style="color:var(--muted)">Teammates connect at <code style="color:var(--text)">http://your-ip:9000</code> on the same Wi-Fi. Find your IP with <code style="color:var(--text)">ipconfig getifaddr en0</code>.</div>
+        </div>
+        <div>
+          <div style="color:var(--cyan);margin-bottom:6px">Remote · Portix tunnel</div>
+          <div style="color:var(--muted)">Run <code style="color:var(--text)">portix 9000 --name skopix</code> for an instant public URL. Teammates open it from anywhere.</div>
+        </div>
+        <div>
+          <div style="color:var(--cyan);margin-bottom:6px">Always-on · Dedicated machine</div>
+          <div style="color:var(--muted)">Leave a Mac or Linux desktop running as a shared server. Recording needs a real display — Docker/cloud VMs won't work for that.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- INSTALL & QUICKSTART -->
+<section class="install-section" id="install">
+  <div class="install-inner">
+    <div class="section-label observe">Installation</div>
+    <h2 class="section-title observe">Up in under<br>a minute.</h2>
+
+    <div class="code-label observe">1. INSTALL</div>
+    <div class="code-block observe">
+      <div><span class="code-cmd">$</span> npm install -g skopix</div>
+      <div><span class="code-cmd">$</span> npx playwright install chromium</div>
+      <div class="code-out">→ Installs the Skopix CLI and Chromium browser on your machine</div>
+    </div>
+
+    <div class="code-label observe">2. CONFIGURE YOUR AI PROVIDER</div>
+    <div class="code-block observe">
+      <div><span class="code-cmd">$</span> skopix init</div>
+      <div class="code-out">→ Choose your provider: gemini / openai / ollama</div>
+      <div class="code-out">→ Enter your API key (or skip for Ollama)</div>
+      <div class="code-out">→ Settings saved to ~/.skopix.env</div>
+    </div>
+
+    <div class="code-label observe">3A. SOLO MODE — JUST YOU</div>
+    <div class="code-block observe">
+      <div><span class="code-cmd">$</span> skopix dashboard</div>
+      <div class="code-out">→ Open http://localhost:9000 in your browser</div>
+      <div class="code-out">→ Click "Record test" to start your first recording</div>
+    </div>
+
+    <div class="code-label observe">3B. TEAM MODE — ONE COMMAND STARTS EVERYTHING</div>
+    <div class="code-block observe">
+      <div class="code-comment"># Add these to ~/.skopix.env once:</div>
+      <div><span class="code-val">SKOPIX_SECRET_KEY</span>=your-shared-secret</div>
+      <div><span class="code-val">SKOPIX_AGENT_EMAIL</span>=your@email.com</div>
+      <div><span class="code-val">SKOPIX_AGENT_PASSWORD</span>=yourpassword</div>
+      <div class="code-comment"># Then just run:</div>
+      <div><span class="code-cmd">$</span> skopix start</div>
+      <div class="code-out">→ Starts the dashboard in team mode</div>
+      <div class="code-out">→ Starts and authenticates the agent on your machine automatically</div>
+      <div class="code-out">→ Teammates connect via http://YOUR-IP:9000</div>
+    </div>
+
+    <div class="code-label observe">3C. TEAMMATES — CONNECT AS AN AGENT</div>
+    <div class="code-block observe">
+      <div class="code-comment"># Each teammate runs this on their own machine:</div>
+      <div><span class="code-cmd">$</span> npm install -g skopix</div>
+      <div><span class="code-cmd">$</span> npx playwright install chromium</div>
+      <div><span class="code-cmd">$</span> skopix agent --server http://HOST-IP:9000 --key "your-secret"</div>
+      <div class="code-out">→ Prompts for Skopix dashboard login to identify your machine</div>
+      <div class="code-out">→ Chrome opens on YOUR machine when you trigger tests</div>
+      <div class="code-out">→ Leave it running in a terminal while you work</div>
+    </div>
+
+    <div class="code-label observe">USING OLLAMA (LOCAL AI — NO API KEY NEEDED)</div>
+    <div class="code-block observe">
+      <div class="code-comment"># Install Ollama from https://ollama.ai, then:</div>
+      <div><span class="code-cmd">$</span> ollama pull llama3.1</div>
+      <div class="code-comment"># In ~/.skopix.env or via My Settings in the dashboard:</div>
+      <div><span class="code-val">SKOPIX_PROVIDER</span>=ollama</div>
+      <div><span class="code-val">OLLAMA_MODEL</span>=llama3.1</div>
+      <div class="code-out">→ AI runs entirely on your machine. No data leaves. No cost.</div>
+    </div>
+
+    <div style="margin-top:40px;background:var(--surface);border:1px solid var(--border-bright);border-radius:12px;padding:28px 32px" class="observe">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--cyan);letter-spacing:0.15em;margin-bottom:16px">HOW IT ALL FITS TOGETHER</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:24px;font-family:var(--mono);font-size:12px;line-height:1.8">
+        <div>
+          <div style="color:var(--white);margin-bottom:6px">1 person hosts</div>
+          <div style="color:var(--muted)">Runs <code style="color:var(--cyan)">skopix dashboard --team</code> and keeps it running. Everyone connects to their machine.</div>
+        </div>
+        <div>
+          <div style="color:var(--white);margin-bottom:6px">Everyone runs an agent</div>
+          <div style="color:var(--muted)">Runs <code style="color:var(--cyan)">skopix agent</code> in a terminal. Their browser opens locally when they trigger a recording or replay.</div>
+        </div>
+        <div>
+          <div style="color:var(--white);margin-bottom:6px">Tests run on your machine</div>
+          <div style="color:var(--muted)">When you click Record or Replay, Skopix dispatches to your agent. Chrome opens on your screen. Results stream back to the shared dashboard.</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:16px;background:rgba(255,193,7,0.06);border:1px solid rgba(255,193,7,0.2);border-radius:12px;padding:20px 32px" class="observe">
+      <div style="font-family:var(--mono);font-size:10px;color:#f59e0b;letter-spacing:0.15em;margin-bottom:10px">⚠ AGENT IS REQUIRED TO RECORD AND REPLAY</div>
+      <div style="font-family:var(--mono);font-size:12px;color:var(--muted);line-height:1.8">In team mode, the agent must be running on your machine before you can record or replay tests. The dashboard alone cannot open a browser — the agent is what does the browser work locally. Always start your agent before using the dashboard.</div>
+    </div>
+
+    <div class="code-label observe" style="margin-top:32px">BACKUP YOUR TESTS</div>
+    <div class="code-block observe">
+      <div class="code-comment"># All your tests, suites, sessions and credentials live in one place:</div>
+      <div class="code-out">→ ~/.skopix/</div>
+      <div class="code-comment"># Back up everything to a zip on your Desktop:</div>
+      <div><span class="code-cmd">$</span> node skopix-backup.js</div>
+      <div class="code-out">→ Creates skopix-backup-2026-05-26.zip on your Desktop</div>
+      <div class="code-comment"># Restore on any machine (auto-finds the zip on Desktop/Downloads):</div>
+      <div><span class="code-cmd">$</span> node skopix-restore.js</div>
+      <div class="code-out">→ Restores all tests, suites, sessions and credentials</div>
+      <div class="code-out">→ Restart Skopix after restoring</div>
+    </div>
+
+    <div style="margin-top:16px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 32px" class="observe">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--cyan);letter-spacing:0.15em;margin-bottom:10px">DOWNLOAD BACKUP SCRIPTS</div>
+      <div style="font-family:var(--mono);font-size:12px;color:var(--muted);line-height:1.8">
+        Get <code style="color:var(--cyan)">skopix-backup.js</code> and <code style="color:var(--cyan)">skopix-restore.js</code> from the
+        <a href="https://github.com/x444dyx/skopix" target="_blank" style="color:var(--cyan)">GitHub repo</a>.
+        On Mac, double-click <code style="color:var(--cyan)">.command</code> wrappers to run without opening a terminal.
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq">
+  <div class="section-inner">
+    <div class="section-label observe">FAQ</div>
+    <h2 class="section-title observe">Questions.</h2>
+
+    <div class="faq-list">
+
+      <details class="observe">
+        <summary>Do I need to write any code? <span class="faq-icon">+</span></summary>
+        <div class="faq-body">No. You use your app, Skopix records it. The AI generates Playwright code automatically after each recording — you can download the <code>.spec.js</code> or <code>.spec.ts</code> file if you want to run it in CI directly. But you never have to write a selector or a test script yourself.</div>
+      </details>
+
+      <details class="observe">
+        <summary>How is this different from Playwright's own recorder? <span class="faq-icon">+</span></summary>
+        <div class="faq-body">Playwright's recorder generates raw selectors as-is — often fragile positional ones. Skopix uses an LLM to <strong>stabilise</strong> those selectors into semantic, stable equivalents. It also adds a full dashboard, team mode, setup/teardown flows, debug recording, credential management, suite running, and session history with video. It's a complete QA platform, not just a code generator.</div>
+      </details>
+
+      <details class="observe">
+        <summary>What if a selector breaks after a UI change? <span class="faq-icon">+</span></summary>
+        <div class="faq-body">Open the step editor (✏ on any test), find the failing step, and update the selector directly. Or use the ⏺ debug button on that step — Skopix replays everything up to that point in a real browser, then lets you record the correct action from scratch. New steps are AI-processed and inserted automatically.</div>
+      </details>
+
+      <details class="observe">
+        <summary>How does the login/setup flow work? <span class="faq-icon">+</span></summary>
+        <div class="faq-body">Record your login flow once and mark it as <strong>Reusable</strong>. In any other test's editor, set that login test as the <strong>Setup</strong>. When that test runs, Skopix runs the login steps first in the same browser session — so the test starts already authenticated. No duplicating login steps across every test.</div>
+      </details>
+
+      <details class="observe">
+        <summary>Can I store credentials securely? <span class="faq-icon">+</span></summary>
+        <div class="faq-body">Yes. Go to Credentials in the dashboard, create a named credential set (e.g. <code>panintelligence</code>) with username and password. Attach it to a test via the step editor. During replay, Skopix substitutes the stored password into any <code>isPassword: true</code> step — so the real password is never stored in the test YAML, and teammates with different credentials can run the same test.</div>
+      </details>
+
+      <details class="observe">
+        <summary>Can I use Ollama or a local LLM? <span class="faq-icon">+</span></summary>
+        <div class="faq-body">Yes. Install <a href="https://ollama.ai" style="color:var(--cyan)">Ollama</a>, pull any model (<code>ollama pull llama3.1</code> or <code>ollama pull qwen2.5-coder</code>), then set <code>SKOPIX_PROVIDER=ollama</code> and <code>OLLAMA_MODEL=llama3.1</code> in your <code>.skopix.env</code>. AI runs entirely on your machine — no data leaves, no API costs, works offline. Note: smaller models may produce less stable selectors than Gemini or GPT-4o.</div>
+      </details>
+
+      <details class="observe">
+        <summary>How do remote teammates connect? <span class="faq-icon">+</span></summary>
+        <div class="faq-body"><strong>Same office:</strong> connect at <code>http://your-ip:9000</code> on the same network. <strong>Remote:</strong> run <code>portix 9000 --name skopix</code> (using <a href="https://portix.ayteelabs.com" style="color:var(--cyan)">Portix</a>) for an instant public URL — teammates open it from anywhere. <strong>Always-on:</strong> deploy to a cloud VM with Docker (~£4/mo at Hetzner), point your domain at it, done.</div>
+      </details>
+
+      <details class="observe">
+        <summary>Can I run tests in CI? <span class="faq-icon">+</span></summary>
+        <div class="faq-body">Yes — download the generated Playwright code. Every recording produces a <code>.spec.js</code> and <code>.spec.ts</code> file you can grab from the "View code" button on any test. Drop those into your existing Playwright CI setup and run with <code>npx playwright test</code>. That's the recommended CI path — the generated code is clean, stable, and has no Skopix dependency.</div>
+      </details>
+
+      <details class="observe">
+        <summary>Does replay open a real browser? <span class="faq-icon">+</span></summary>
+        <div class="faq-body">Yes — Skopix opens a real headed Chrome window for recording and replay. This means it needs to run on a machine with a display (your Mac, Windows PC, or Linux desktop). <strong>Docker containers don't work</strong> for recording or replay because they have no display. The recommended setup is to run Skopix on one team member's machine and have everyone else connect via their browser — no installation required on their end.</div>
+      </details>
+
+      <details class="observe">
+        <summary>How do I update Skopix? <span class="faq-icon">+</span></summary>
+        <div class="faq-body"><code>npm install -g skopix@latest</code> then restart the dashboard. Docker: <code>docker compose pull && docker compose up -d</code>. Your test data in <code>~/.skopix/</code> (or the mounted volume) is never touched during updates.</div>
+      </details>
+
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="cta-title observe">Start recording.<br><span style="color:var(--cyan)">Stop scripting.</span></div>
+  <p class="cta-sub observe">Free. Self-hosted. Your tests, your data, your machine. One command to get started.</p>
+  <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap" class="observe">
+    <a href="#install" class="btn-primary">Install now →</a>
+    <a href="https://github.com/x444dyx/skopix" class="btn-ghost">GitHub</a>
+    <a href="https://portix.ayteelabs.com" class="btn-ghost">Share with Portix</a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-brand">SKOPIX</div>
+  <ul class="footer-links">
+    <li><a href="#how">How it works</a></li>
+    <li><a href="#ai">AI providers</a></li>
+    <li><a href="#install">Install</a></li>
+    <li><a href="#faq">FAQ</a></li>
+    <li><a href="https://github.com/x444dyx/skopix">GitHub</a></li>
+    <li><a href="https://ayteelabs.com">Aytee Labs</a></li>
+  </ul>
+  <div class="footer-copy">© 2026 Aytee Labs. Built by Adil.</div>
+</footer>
+
+<script>
+const cursor = document.getElementById('cursor');
+const ring = document.getElementById('cursorRing');
+let mx = 0, my = 0, rx = 0, ry = 0;
+
+document.addEventListener('mousemove', e => {
+  mx = e.clientX; my = e.clientY;
+  cursor.style.left = mx - 4 + 'px';
+  cursor.style.top = my - 4 + 'px';
+});
+
+function animRing() {
+  rx += (mx - rx - 16) * 0.15;
+  ry += (my - ry - 16) * 0.15;
+  ring.style.left = rx + 'px';
+  ring.style.top = ry + 'px';
+  requestAnimationFrame(animRing);
+}
+animRing();
+
+document.querySelectorAll('a, button, details, .step-item, .feature-card, .provider-card').forEach(el => {
+  el.addEventListener('mouseenter', () => { cursor.classList.add('hover'); ring.classList.add('hover'); });
+  el.addEventListener('mouseleave', () => { cursor.classList.remove('hover'); ring.classList.remove('hover'); });
+});
+
+window.addEventListener('scroll', () => {
+  document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 60);
+});
+
+const obs = new IntersectionObserver((entries) => {
+  entries.forEach((e, i) => {
+    if (e.isIntersecting) setTimeout(() => e.target.classList.add('visible'), i * 80);
+  });
+}, { threshold: 0.1 });
+
+document.querySelectorAll('.observe, .step-item, .feature-card, .provider-card, .stat-item').forEach(el => obs.observe(el));
+</script>
+</body>
+</html>
